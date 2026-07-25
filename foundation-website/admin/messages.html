@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="sidebar-logo"><img src="../images/logo.png" alt="Logo"><h3>Admin Panel</h3></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="donations.html"><i class="fas fa-hand-holding-heart"></i> Donations</a>
+      <a href="celebrations.html"><i class="fas fa-birthday-cake"></i> Celebrations</a>
+      <a href="volunteers.html"><i class="fas fa-users"></i> Volunteers</a>
+      <a href="messages.html" class="active"><i class="fas fa-envelope"></i> Messages</a>
+      <a href="content.html"><i class="fas fa-images"></i> Content</a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      <a href="../index.html"><i class="fas fa-globe"></i> View Site</a>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Contact Messages</h1>
+      <div class="topbar-right"><span class="admin-name"><i class="fas fa-user-circle"></i> Admin</span></div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card stat-blue"><div class="stat-icon"><i class="fas fa-envelope"></i></div><div class="stat-info"><h3 id="mTotal">0</h3><p>Total Messages</p></div></div>
+      <div class="stat-card stat-orange"><div class="stat-icon"><i class="fas fa-envelope-open"></i></div><div class="stat-info"><h3 id="mUnread">0</h3><p>Unread</p></div></div>
+      <div class="stat-card stat-green"><div class="stat-icon"><i class="fas fa-reply"></i></div><div class="stat-info"><h3 id="mReplied">0</h3><p>Replied</p></div></div>
+      <div class="stat-card stat-purple"><div class="stat-icon"><i class="fas fa-calendar-day"></i></div><div class="stat-info"><h3 id="mToday">0</h3><p>Today</p></div></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Search messages..." id="searchMsg" onkeyup="filterTable()"></div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>S.No</th><th>Name</th><th>Email</th><th>Phone</th><th>Subject</th><th>Message</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="msgBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Modal -->
+  <div class="modal-overlay" id="viewModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Message Details</h3><button class="modal-close" onclick="closeViewModal()">&times;</button></div>
+      <div id="msgDetails"></div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    if (sessionStorage.getItem('adminLoggedIn') !== 'true') { window.location.href = 'index.html'; }
+    function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
+
+    let messages = [];
+
+    function renderTable() {
+      const tbody = document.getElementById('msgBody');
+      tbody.innerHTML = messages.map((m, i) => `
+        <tr style="${m.status === 'Unread' ? 'font-weight:600;background:#f8fafc' : ''}">
+          <td>${i + 1}</td>
+          <td>${m.name}</td>
+          <td>${m.email}</td>
+          <td>${m.phone}</td>
+          <td>${m.subject}</td>
+          <td title="${m.msg}">${m.msg.substring(0, 40)}...</td>
+          <td>${new Date(m.date).toLocaleDateString('en-IN', {day:'numeric',month:'short'})}</td>
+          <td><span class="badge ${m.status === 'Replied' ? 'badge-success' : 'badge-pending'}">${m.status}</span></td>
+          <td>
+            <button onclick="viewMsg(${m.id})" style="border:none;background:none;color:#1d4ed8;cursor:pointer" title="View"><i class="fas fa-eye"></i></button>
+            <button onclick="markRead(${m.id})" style="border:none;background:none;color:#16a34a;cursor:pointer" title="Mark Replied"><i class="fas fa-check"></i></button>
+            <button onclick="deleteMsg(${m.id})" style="border:none;background:none;color:#dc2626;cursor:pointer" title="Delete"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>`).join('');
+    }
+
+    function viewMsg(id) {
+      const m = messages.find(x => x.id === id);
+      document.getElementById('msgDetails').innerHTML = `
+        <div style="margin-bottom:15px"><strong>From:</strong> ${m.name}</div>
+        <div style="margin-bottom:15px"><strong>Email:</strong> ${m.email}</div>
+        <div style="margin-bottom:15px"><strong>Phone:</strong> ${m.phone}</div>
+        <div style="margin-bottom:15px"><strong>Subject:</strong> ${m.subject}</div>
+        <div style="margin-bottom:15px"><strong>Date:</strong> ${m.date}</div>
+        <div style="margin-bottom:15px;padding:15px;background:#f8fafc;border-radius:8px"><strong>Message:</strong><br>${m.msg}</div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <a href="mailto:${m.email}?subject=Re: ${m.subject}" class="btn btn-primary" style="text-decoration:none"><i class="fas fa-reply"></i> Reply via Email</a>
+          <a href="https://wa.me/91${m.phone}" target="_blank" class="btn btn-success" style="text-decoration:none"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+        </div>`;
+      document.getElementById('viewModal').classList.add('active');
+      if (m.status === 'Unread') { markRead(id); }
+    }
+
+    function markRead(id) { messages = messages.map(m => m.id === id ? {...m, status: 'Replied'} : m); DataAPI.save('messages', messages); renderTable(); updateStats(); }
+    function deleteMsg(id) { if(confirm('Delete this message?')) { messages = messages.filter(m => m.id !== id); DataAPI.save('messages', messages); renderTable(); updateStats(); } }
+    function filterTable() { const q = document.getElementById('searchMsg').value.toLowerCase(); document.querySelectorAll('#msgBody tr').forEach(r => { r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none'; }); }
+    function closeViewModal() { document.getElementById('viewModal').classList.remove('active'); }
+
+    function updateStats() {
+      document.getElementById('mTotal').textContent = messages.length;
+      document.getElementById('mUnread').textContent = messages.filter(m => m.status === 'Unread').length;
+      document.getElementById('mReplied').textContent = messages.filter(m => m.status === 'Replied').length;
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('mToday').textContent = messages.filter(m => m.date === today).length;
+    }
+
+    async function init() { messages = await DataAPI.load('messages') || []; renderTable(); updateStats(); }
+    init();
+  </script>
+</body>
+</html>

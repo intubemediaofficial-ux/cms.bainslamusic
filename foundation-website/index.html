@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bainsla Music Private Limited — India's Devotional, Folk & Rasiya Music Label</title>
+<meta name="description" content="Bainsla Music is India's leading Devotional, Folk & Rasiya music label. 256+ Songs, 42+ Artists, 178+ Videos.">
+<link rel="icon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#e5e5e5;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+
+/* Navbar */
+.navbar{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 0;transition:all .3s;background:transparent}
+.navbar.scrolled{background:rgba(10,10,10,.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(245,158,11,.1)}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{display:flex;align-items:center;gap:10px}
+.nav-logo-icon{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+.nav-logo-text{font-weight:900;font-size:18px;color:#fff;line-height:1}
+.nav-logo-sub{font-size:8px;color:#f59e0b;letter-spacing:3px;font-weight:700}
+.nav-links{display:flex;gap:4px;align-items:center}
+.nav-links a{padding:8px 16px;font-size:12px;font-weight:500;color:#999;letter-spacing:.5px;transition:all .2s;border-radius:6px}
+.nav-links a:hover{color:#f59e0b;background:rgba(245,158,11,.05)}
+.nav-dashboard{padding:8px 20px!important;background:#f59e0b!important;color:#000!important;font-weight:700!important;border-radius:8px!important;letter-spacing:1px!important}
+.nav-dashboard:hover{background:#d97706!important}
+.mobile-menu-btn{display:none;background:none;border:none;color:#fff;font-size:24px;cursor:pointer}
+.mobile-menu{display:none;position:fixed;top:72px;left:0;right:0;background:#0a0a0a;border-bottom:1px solid #222;padding:16px;z-index:99}
+.mobile-menu.open{display:block}
+.mobile-menu a{display:block;padding:12px 16px;color:#999;font-size:14px;border-radius:8px}
+.mobile-menu a:hover{color:#f59e0b;background:rgba(245,158,11,.05)}
+
+/* Hero */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:100px 20px 60px}
+.hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,10,10,.7),rgba(10,10,10,.4))}
+.hero-img{position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity 1s}
+.hero-content{position:relative;z-index:2;text-align:center;max-width:800px}
+.hero-badge{display:inline-block;padding:6px 20px;border:1px solid rgba(245,158,11,.3);border-radius:20px;font-size:11px;font-weight:700;letter-spacing:3px;color:#f59e0b;margin-bottom:20px}
+.hero-title{font-size:clamp(32px,6vw,64px);font-weight:900;line-height:1.1;margin-bottom:16px;background:linear-gradient(to right,#fff,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:clamp(14px,2vw,18px);color:#999;margin-bottom:32px;line-height:1.6}
+.hero-btn{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;background:#f59e0b;color:#000;font-weight:700;font-size:14px;border-radius:8px;letter-spacing:1px;transition:all .3s}
+.hero-btn:hover{background:#d97706;transform:translateY(-2px)}
+.hero-platforms{display:flex;gap:12px;justify-content:center;margin-top:28px}
+.hero-platforms a{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .3s;border:1px solid rgba(255,255,255,.1)}
+.hero-platforms a:hover{background:#f59e0b;color:#000;border-color:#f59e0b;transform:scale(1.1)}
+
+/* Section common */
+.section{padding:80px 20px}
+.section-inner{max-width:1200px;margin:0 auto}
+.section-title{font-size:clamp(24px,4vw,40px);font-weight:900;text-align:center;margin-bottom:8px}
+.section-title span{color:#f59e0b}
+.section-sub{text-align:center;color:#666;font-size:14px;margin-bottom:48px}
+
+/* Genre Marquee */
+.marquee-wrap{overflow:hidden;padding:16px 0;border-top:1px solid #222;border-bottom:1px solid #222;background:#0d0d0d}
+.marquee{display:flex;gap:32px;animation:marquee 30s linear infinite;white-space:nowrap}
+.marquee span{color:#666;font-size:13px;font-weight:600;letter-spacing:1px}
+.marquee span.dot{color:#f59e0b}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* Cards grid */
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.grid-6{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+
+/* Release card */
+.release-card{background:#111;border:1px solid #222;border-radius:12px;overflow:hidden;transition:all .3s}
+.release-card:hover{border-color:#f59e0b;transform:translateY(-4px)}
+.release-card img{width:100%;height:200px;object-fit:cover}
+.release-card .info{padding:16px}
+.release-card .hindi{font-size:16px;font-weight:700;color:#fff;margin-bottom:4px}
+.release-card .eng{font-size:12px;color:#999;margin-bottom:8px}
+.release-card .artist{font-size:11px;color:#f59e0b;font-weight:600}
+
+/* Artist card */
+.artist-card{background:#111;border:1px solid #222;border-radius:12px;padding:24px;text-align:center;transition:all .3s}
+.artist-card:hover{border-color:#f59e0b;transform:translateY(-4px)}
+.artist-card img{width:100px;height:100px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:3px solid #222}
+.artist-card .name{font-size:16px;font-weight:700;color:#f59e0b}
+.artist-card .role{font-size:12px;color:#999;margin-top:4px}
+.artist-card .genre{font-size:11px;color:#666;margin-top:4px}
+.artist-card .social-links{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.artist-card .social-links a{width:30px;height:30px;border-radius:50%;background:#222;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .2s}
+.artist-card .social-links a:hover{background:#f59e0b;color:#000}
+
+/* Video card */
+.video-card{background:#111;border:1px solid #222;border-radius:12px;overflow:hidden;transition:all .3s;cursor:pointer}
+.video-card:hover{border-color:#f59e0b;transform:translateY(-4px)}
+.video-card .thumb{position:relative;padding-top:56.25%;background:#161616}
+.video-card .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.video-card .play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:50%;background:rgba(245,158,11,.9);display:flex;align-items:center;justify-content:center;font-size:20px}
+.video-card .meta{display:flex;justify-content:space-between;padding:4px 8px;background:rgba(0,0,0,.7);position:absolute;bottom:0;left:0;right:0;font-size:11px;color:#ccc}
+.video-card .info{padding:12px}
+.video-card .info .title{font-size:14px;font-weight:700;color:#fff}
+.video-card .info .cat{font-size:11px;color:#f59e0b;margin-top:4px}
+
+/* Catalogue */
+.cat-card{background:#111;border:1px solid #222;border-radius:12px;padding:20px;display:flex;align-items:center;gap:12px;transition:all .3s}
+.cat-card:hover{border-color:#f59e0b}
+.cat-card .icon{width:40px;height:40px;border-radius:8px;background:rgba(245,158,11,.1);display:flex;align-items:center;justify-content:center;font-size:18px}
+.cat-card .name{flex:1;font-weight:700;font-size:14px}
+.cat-card .count{color:#f59e0b;font-weight:800;font-size:18px}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin:40px 0}
+.stat-card{text-align:center;padding:24px;background:#111;border:1px solid #222;border-radius:12px}
+.stat-card .num{font-size:36px;font-weight:900;color:#f59e0b}
+.stat-card .label{font-size:12px;color:#999;margin-top:4px}
+
+/* Licensing */
+.license-card{background:#111;border:1px solid #222;border-radius:12px;padding:24px;transition:all .3s}
+.license-card:hover{border-color:#f59e0b}
+.license-card .icon{font-size:28px;margin-bottom:8px}
+.license-card .title{font-size:16px;font-weight:700;color:#f59e0b;margin-bottom:4px}
+.license-card .desc{font-size:12px;color:#999;line-height:1.5}
+
+/* Contact */
+.contact-form{max-width:600px;margin:0 auto}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;color:#999;margin-bottom:6px;font-weight:600}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:12px 16px;background:#111;border:1px solid #222;border-radius:8px;color:#fff;font-size:14px;font-family:inherit;outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#f59e0b}
+.form-group textarea{min-height:120px;resize:vertical}
+.submit-btn{width:100%;padding:14px;background:#f59e0b;color:#000;font-weight:700;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;letter-spacing:1px}
+.submit-btn:hover{background:#d97706}
+
+/* Footer */
+.footer{background:#111;border-top:1px solid #222;padding:48px 20px 24px}
+.footer-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:32px}
+.footer-logo .name{font-size:20px;font-weight:900;color:#fff}
+.footer-logo .sub{font-size:10px;color:#f59e0b;letter-spacing:3px}
+.footer-logo p{font-size:12px;color:#666;margin-top:8px;line-height:1.6}
+.footer h4{font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:12px;letter-spacing:1px}
+.footer ul{list-style:none}
+.footer ul li{margin-bottom:8px}
+.footer ul li a{font-size:12px;color:#999;transition:color .2s}
+.footer ul li a:hover{color:#f59e0b}
+.footer-bottom{text-align:center;padding-top:24px;margin-top:24px;border-top:1px solid #222;font-size:11px;color:#666}
+
+/* Floating social */
+.floating-social{position:fixed;bottom:20px;left:20px;display:flex;flex-direction:column;gap:8px;z-index:90}
+.floating-social a{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;transition:all .3s;border:1px solid rgba(255,255,255,.1)}
+.floating-social a.yt{background:rgba(255,0,0,.8)}
+.floating-social a.ig{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)}
+.floating-social a.fb{background:rgba(24,119,242,.8)}
+.floating-social a:hover{transform:scale(1.15)}
+
+/* Distribution */
+.dist-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.dist-tag{padding:10px 20px;background:#111;border:1px solid #222;border-radius:8px;font-size:13px;font-weight:600;transition:all .2s}
+.dist-tag:hover{border-color:#f59e0b;color:#f59e0b}
+
+/* About section */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.about-img{border-radius:16px;overflow:hidden;border:2px solid #222}
+.about-img img{width:100%;height:400px;object-fit:cover}
+.about-text h3{font-size:28px;font-weight:800;margin-bottom:16px}
+.about-text h3 span{color:#f59e0b}
+.about-text p{color:#999;font-size:14px;line-height:1.8;margin-bottom:16px}
+
+/* Responsive */
+@media(max-width:768px){
+  .nav-links{display:none}
+  .mobile-menu-btn{display:block}
+  .grid-3,.grid-4,.grid-6{grid-template-columns:1fr 1fr}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .footer-inner{grid-template-columns:1fr 1fr}
+  .about-grid{grid-template-columns:1fr}
+  .hero-title{font-size:32px}
+}
+@media(max-width:480px){
+  .grid-3,.grid-4,.grid-6{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .footer-inner{grid-template-columns:1fr}
+}
+
+/* Scroll animations */
+.reveal{opacity:0;transform:translateY(30px);transition:all .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-left{opacity:0;transform:translateX(-30px);transition:all .6s ease}
+.reveal-left.visible{opacity:1;transform:translateX(0)}
+.reveal-right{opacity:0;transform:translateX(30px);transition:all .6s ease}
+.reveal-right.visible{opacity:1;transform:translateX(0)}
+
+/* Loading */
+#loading{position:fixed;inset:0;background:#0a0a0a;display:flex;align-items:center;justify-content:center;z-index:200;transition:opacity .5s}
+#loading.hide{opacity:0;pointer-events:none}
+.loader{width:40px;height:40px;border:3px solid #222;border-top-color:#f59e0b;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading"><div class="loader"></div></div>
+
+<!-- Floating Social -->
+<div class="floating-social" id="floatingSocial">
+  <a href="#" class="yt" id="socialYt" target="_blank">▶</a>
+  <a href="#" class="ig" id="socialIg" target="_blank">📷</a>
+  <a href="#" class="fb" id="socialFb" target="_blank">f</a>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="#home" class="nav-logo">
+      <div class="nav-logo-icon">♪</div>
+      <div>
+        <div class="nav-logo-text">BAINSLA MUSIC</div>
+        <div class="nav-logo-sub">PRIVATE LIMITED</div>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="#home">HOME</a>
+      <a href="#releases">RELEASES</a>
+      <a href="#artists">ARTISTS</a>
+      <a href="#videos">VIDEOS</a>
+      <a href="#catalogue">CATALOGUE</a>
+      <a href="#about">ABOUT</a>
+      <a href="#contact">CONTACT</a>
+      <a href="/dashboard/" class="nav-dashboard">DASHBOARD</a>
+    </div>
+    <button class="mobile-menu-btn" onclick="document.getElementById('mobileMenu').classList.toggle('open')">☰</button>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#home" onclick="closeMobile()">HOME</a>
+  <a href="#releases" onclick="closeMobile()">RELEASES</a>
+  <a href="#artists" onclick="closeMobile()">ARTISTS</a>
+  <a href="#videos" onclick="closeMobile()">VIDEOS</a>
+  <a href="#catalogue" onclick="closeMobile()">CATALOGUE</a>
+  <a href="#about" onclick="closeMobile()">ABOUT</a>
+  <a href="#contact" onclick="closeMobile()">CONTACT</a>
+  <a href="/dashboard/" style="color:#f59e0b;font-weight:700">DASHBOARD</a>
+</div>
+
+<!-- Hero -->
+<section class="hero" id="home">
+  <div class="hero-img" id="heroImg"></div>
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <div class="hero-badge">NOW STREAMING</div>
+    <h1 class="hero-title" id="heroTitle">BAINSLA MUSIC PRIVATE LIMITED</h1>
+    <p class="hero-sub" id="heroSub">India's Devotional, Folk & Rasiya Music Label</p>
+    <a href="#releases" class="hero-btn">▶ LISTEN NOW</a>
+    <div class="hero-platforms">
+      <a href="https://youtube.com/@bainslaofficial" target="_blank">▶</a>
+      <a href="#" target="_blank">♪</a>
+      <a href="#" target="_blank">🎵</a>
+      <a href="#" target="_blank">♫</a>
+      <a href="#" target="_blank">🎧</a>
+    </div>
+  </div>
+</section>
+
+<!-- Genre Marquee -->
+<div class="marquee-wrap">
+  <div class="marquee" id="marquee">
+    <span>Krishna Bhajan</span><span class="dot">•</span>
+    <span>Radha Bhajan</span><span class="dot">•</span>
+    <span>Hanuman Bhajan</span><span class="dot">•</span>
+    <span>Ram Bhajan</span><span class="dot">•</span>
+    <span>Shiv Bhajan</span><span class="dot">•</span>
+    <span>Gurjar Rasiya</span><span class="dot">•</span>
+    <span>DJ Rasiya</span><span class="dot">•</span>
+    <span>Folk Songs</span><span class="dot">•</span>
+    <span>Devotional</span><span class="dot">•</span>
+    <span>Krishna Bhajan</span><span class="dot">•</span>
+    <span>Radha Bhajan</span><span class="dot">•</span>
+    <span>Hanuman Bhajan</span><span class="dot">•</span>
+    <span>Ram Bhajan</span><span class="dot">•</span>
+    <span>Shiv Bhajan</span><span class="dot">•</span>
+    <span>Gurjar Rasiya</span><span class="dot">•</span>
+    <span>DJ Rasiya</span><span class="dot">•</span>
+    <span>Folk Songs</span><span class="dot">•</span>
+    <span>Devotional</span><span class="dot">•</span>
+  </div>
+</div>
+
+<!-- Releases -->
+<section class="section" id="releases">
+  <div class="section-inner">
+    <h2 class="section-title reveal">Latest <span>Releases</span></h2>
+    <p class="section-sub reveal">Our newest devotional and folk music releases</p>
+    <div class="grid-3" id="releasesGrid"></div>
+  </div>
+</section>
+
+<!-- Artists -->
+<section class="section" id="artists" style="background:#0d0d0d">
+  <div class="section-inner">
+    <h2 class="section-title reveal">Our <span>Artists</span></h2>
+    <p class="section-sub reveal">Talented artists who bring devotional music to life</p>
+    <div class="grid-4" id="artistsGrid"></div>
+  </div>
+</section>
+
+<!-- Videos -->
+<section class="section" id="videos">
+  <div class="section-inner">
+    <h2 class="section-title reveal">Latest <span>Videos</span></h2>
+    <p class="section-sub reveal">Watch our devotional music videos on YouTube</p>
+    <div class="grid-3" id="videosGrid"></div>
+  </div>
+</section>
+
+<!-- Catalogue -->
+<section class="section" id="catalogue" style="background:#0d0d0d">
+  <div class="section-inner">
+    <h2 class="section-title reveal">Music <span>Catalogue</span></h2>
+    <p class="section-sub reveal">Browse our collection by genre and category</p>
+    <div class="grid-4" id="catalogueGrid"></div>
+  </div>
+</section>
+
+<!-- About -->
+<section class="section" id="about">
+  <div class="section-inner">
+    <h2 class="section-title reveal">About <span>Us</span></h2>
+    <p class="section-sub reveal" id="aboutTagline"></p>
+    <div class="about-grid">
+      <div class="about-img reveal-left"><img id="aboutImg" src="/images/hero/krishna-hero.png" alt="Bainsla Music"></div>
+      <div class="about-text reveal-right">
+        <h3>🎵 <span id="aboutName">Bainsla Music Private Limited</span></h3>
+        <p id="aboutText"></p>
+        <div class="stats-row" id="statsRow"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Licensing -->
+<section class="section" id="licensing" style="background:#0d0d0d">
+  <div class="section-inner">
+    <h2 class="section-title reveal">Licensing & <span>Copyright</span></h2>
+    <p class="section-sub reveal">Professional licensing solutions for music usage</p>
+    <div class="grid-3" id="licensingGrid">
+      <div class="license-card reveal"><div class="icon">🎵</div><div class="title">Song Licensing</div><div class="desc">License our songs for commercial, film, TV, and personal use with proper agreements.</div></div>
+      <div class="license-card reveal"><div class="icon">©</div><div class="title">Copyright Protection</div><div class="desc">Full copyright protection and Content ID management through YouTube CMS.</div></div>
+      <div class="license-card reveal"><div class="icon">🎤</div><div class="title">Cover Permission</div><div class="desc">Get permission to create covers and remixes of our original songs.</div></div>
+      <div class="license-card reveal"><div class="icon">🤝</div><div class="title">Collaboration</div><div class="desc">Partner with us for music production, distribution, and channel management.</div></div>
+      <div class="license-card reveal"><div class="icon">📊</div><div class="title">YouTube CMS</div><div class="desc">Multi-channel network management and monetization across YouTube.</div></div>
+      <div class="license-card reveal"><div class="icon">📤</div><div class="title">Submit Your Song</div><div class="desc">Submit your original devotional or folk music for distribution on 150+ platforms.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Distribution -->
+<section class="section" id="distribution">
+  <div class="section-inner">
+    <h2 class="section-title reveal">Distribution <span>Partners</span></h2>
+    <p class="section-sub reveal">Available on all major music platforms worldwide</p>
+    <div class="dist-grid reveal">
+      <span class="dist-tag">YouTube Music</span>
+      <span class="dist-tag">Spotify</span>
+      <span class="dist-tag">Apple Music</span>
+      <span class="dist-tag">JioSaavn</span>
+      <span class="dist-tag">Amazon Music</span>
+      <span class="dist-tag">Wynk Music</span>
+      <span class="dist-tag">Gaana</span>
+      <span class="dist-tag">Hungama</span>
+      <span class="dist-tag">Instagram Music</span>
+      <span class="dist-tag">Facebook Music</span>
+      <span class="dist-tag">TikTok</span>
+      <span class="dist-tag">Resso</span>
+      <span class="dist-tag">Tidal</span>
+      <span class="dist-tag">Deezer</span>
+      <span class="dist-tag" style="color:#f59e0b;border-color:#f59e0b">150+ More Platforms</span>
+    </div>
+  </div>
+</section>
+
+<!-- Directors -->
+<section class="section" id="directors" style="background:#0d0d0d">
+  <div class="section-inner">
+    <h2 class="section-title reveal">Our <span>Directors</span></h2>
+    <p class="section-sub reveal">Meet the leadership team behind Bainsla Music Private Limited</p>
+    <div class="grid-3" id="directorsGrid"></div>
+  </div>
+</section>
+
+<!-- Instagram Reels -->
+<section class="section" id="instagram">
+  <div class="section-inner">
+    <h2 class="section-title reveal">Follow Us on <span>Instagram</span></h2>
+    <p class="section-sub reveal">Watch our latest reels and behind-the-scenes content</p>
+    <div style="text-align:center" class="reveal">
+      <a href="https://www.instagram.com/bainsla_music_company" target="_blank" style="display:inline-flex;align-items:center;gap:10px;padding:14px 32px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;border-radius:12px;font-weight:700;font-size:15px;text-decoration:none;transition:transform .3s">📷 @bainsla_music_company</a>
+    </div>
+    <div id="instaReelsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:32px"></div>
+  </div>
+</section>
+
+<!-- Contact -->
+<section class="section" id="contact" style="background:#0d0d0d">
+  <div class="section-inner">
+    <h2 class="section-title reveal">Contact <span>Us</span></h2>
+    <p class="section-sub reveal">Get in touch for inquiries, licensing, and collaborations</p>
+    <div class="contact-form reveal">
+      <form id="contactForm" onsubmit="submitContact(event)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group"><label>Name *</label><input type="text" name="name" required placeholder="Your name"></div>
+          <div class="form-group"><label>Email *</label><input type="email" name="email" required placeholder="Your email"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group"><label>Phone</label><input type="tel" name="phone" placeholder="Phone number"></div>
+          <div class="form-group"><label>Inquiry Type</label>
+            <select name="type"><option>General Inquiry</option><option>Song Licensing</option><option>Copyright Claim</option><option>Collaboration</option><option>Distribution</option><option>Channel Management</option><option>Submit Song</option><option>Business</option></select>
+          </div>
+        </div>
+        <div class="form-group"><label>Message *</label><textarea name="message" required placeholder="Your message..."></textarea></div>
+        <button type="submit" class="submit-btn">SEND MESSAGE</button>
+      </form>
+      <div style="text-align:center;margin-top:20px">
+        <a id="whatsappLink" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:#25d366;color:#fff;border-radius:8px;font-weight:700;font-size:13px">💬 WhatsApp Us</a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:32px;text-align:center">
+        <div><div style="font-size:24px;margin-bottom:8px">📞</div><div style="font-size:12px;color:#f59e0b;font-weight:700" id="contactPhone"></div></div>
+        <div><div style="font-size:24px;margin-bottom:8px">✉️</div><div style="font-size:12px;color:#f59e0b;font-weight:700" id="contactEmail"></div></div>
+        <div><div style="font-size:24px;margin-bottom:8px">📧</div><div style="font-size:12px;color:#f59e0b;font-weight:700" id="contactSupport"></div></div>
+        <div><div style="font-size:24px;margin-bottom:8px">📍</div><div style="font-size:12px;color:#f59e0b;font-weight:700" id="contactAddress"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <div class="name">BAINSLA MUSIC</div>
+      <div class="sub">PRIVATE LIMITED</div>
+      <p id="footerDesc"></p>
+    </div>
+    <div>
+      <h4>QUICK LINKS</h4>
+      <ul>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#releases">Releases</a></li>
+        <li><a href="#artists">Artists</a></li>
+        <li><a href="#videos">Videos</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>SERVICES</h4>
+      <ul>
+        <li><a href="#licensing">Song Licensing</a></li>
+        <li><a href="#distribution">Distribution</a></li>
+        <li><a href="#licensing">Copyright</a></li>
+        <li><a href="#contact">Submit Song</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>COMPANY</h4>
+      <ul>
+        <li><a href="#about">About Us</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="#catalogue">Catalogue</a></li>
+        <li><a href="/dashboard/">Dashboard</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>CONTACT</h4>
+      <ul>
+        <li><span id="footerPhone" style="font-size:12px;color:#999"></span></li>
+        <li><span id="footerEmail" style="font-size:12px;color:#999"></span></li>
+        <li><span id="footerAddress" style="font-size:12px;color:#999"></span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2024 Bainsla Music Private Limited. All Rights Reserved. Made with ❤️ for Devotional Music</div>
+</footer>
+
+<script>
+const API = '/api/data.php?section=public';
+let DATA = {};
+
+async function loadSite() {
+  try {
+    const res = await fetch(API);
+    DATA = await res.json();
+    renderAll();
+  } catch(e) {
+    console.error('API error', e);
+    document.getElementById('loading').classList.add('hide');
+  }
+}
+
+function renderAll() {
+  const s = DATA.settings || {};
+  
+  // Hero
+  if (DATA.banners && DATA.banners[0] && DATA.banners[0].image) {
+    document.getElementById('heroImg').style.backgroundImage = 'url(' + DATA.banners[0].image + ')';
+  }
+  document.getElementById('heroTitle').textContent = s.company_name || 'BAINSLA MUSIC PRIVATE LIMITED';
+  document.getElementById('heroSub').textContent = s.tagline || "India's Devotional, Folk & Rasiya Music Label";
+
+  // Social links
+  if (s.youtube_url) { document.getElementById('socialYt').href = s.youtube_url; }
+  if (s.instagram_url) { document.getElementById('socialIg').href = s.instagram_url; }
+  if (s.facebook_url) { document.getElementById('socialFb').href = s.facebook_url; }
+
+  // Releases
+  const rg = document.getElementById('releasesGrid');
+  rg.innerHTML = '';
+  (DATA.releases || []).forEach(r => {
+    const img = r.image || '/images/songs/shyam-teri-bansi.jpg';
+    const url = r.url || '#';
+    rg.innerHTML += '<a href="' + url + '" target="_blank" class="release-card reveal"><img src="' + img + '" alt="' + (r.hindi_title||'') + '" onerror="this.src=\'/images/hero/krishna-hero.png\'"><div class="info"><div class="hindi">' + (r.hindi_title||'') + '</div><div class="eng">' + (r.eng_title||'') + '</div><div class="artist">' + (r.artist||r.label||'Bainsla Music') + '</div></div></a>';
+  });
+
+  // Artists
+  const ag = document.getElementById('artistsGrid');
+  ag.innerHTML = '';
+  (DATA.artists || []).forEach(a => {
+    const img = a.image || '';
+    const imgHtml = img ? '<img src="' + img + '" alt="' + a.name + '" onerror="this.style.display=\'none\'">' : '<div style="width:100px;height:100px;border-radius:50%;background:#222;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:32px">👤</div>';
+    let social = '';
+    if (a.youtube_url || a.instagram_url || a.facebook_url || a.spotify_url) {
+      social = '<div class="social-links">';
+      if (a.youtube_url) social += '<a href="' + a.youtube_url + '" target="_blank">▶</a>';
+      if (a.instagram_url) social += '<a href="' + a.instagram_url + '" target="_blank">📷</a>';
+      if (a.facebook_url) social += '<a href="' + a.facebook_url + '" target="_blank">f</a>';
+      if (a.spotify_url) social += '<a href="' + a.spotify_url + '" target="_blank">♪</a>';
+      social += '</div>';
+    }
+    ag.innerHTML += '<div class="artist-card reveal">' + imgHtml + '<div class="name">' + a.name + '</div><div class="role">' + (a.role||'') + '</div><div class="genre">' + (a.genre||'') + '</div>' + social + '</div>';
+  });
+  // Add "Join Our Team" card
+  ag.innerHTML += '<div class="artist-card reveal" style="display:flex;flex-direction:column;align-items:center;justify-content:center;border-style:dashed;border-color:#f59e0b"><div style="font-size:40px;margin-bottom:8px">🎤</div><div class="name">Join Our Team</div><div class="role">Become a Bainsla Music Artist</div><a href="#contact" style="margin-top:12px;padding:8px 20px;background:#f59e0b;color:#000;border-radius:6px;font-size:12px;font-weight:700">APPLY NOW</a></div>';
+
+  // Videos
+  const vg = document.getElementById('videosGrid');
+  vg.innerHTML = '';
+  (DATA.videos || []).forEach(v => {
+    const thumb = v.thumbnail || (v.youtube_id ? 'https://img.youtube.com/vi/' + v.youtube_id + '/hqdefault.jpg' : '/images/hero/krishna-hero.png');
+    const url = v.youtube_id ? 'https://www.youtube.com/watch?v=' + v.youtube_id : '#';
+    vg.innerHTML += '<a href="' + url + '" target="_blank" class="video-card reveal"><div class="thumb"><img src="' + thumb + '" alt="' + (v.hindi_title||'') + '" onerror="this.src=\'/images/hero/krishna-hero.png\'"><div class="play-btn">▶</div><div class="meta"><span>' + (v.duration||'') + '</span><span>' + (v.views||'') + ' views</span></div></div><div class="info"><div class="title">' + (v.hindi_title||v.eng_title||'') + '</div><div class="cat">' + (v.category||'Devotional') + ' • Bainsla Music</div></div></a>';
+  });
+
+  // Catalogue
+  const cg = document.getElementById('catalogueGrid');
+  cg.innerHTML = '';
+  (DATA.catalogue || []).forEach(c => {
+    cg.innerHTML += '<div class="cat-card reveal"><div class="icon">🎵</div><div class="name">' + c.name + (c.hindi ? '<br><span style="font-size:11px;color:#666">' + c.hindi + '</span>' : '') + '</div><div class="count">' + (c.count||0) + '</div></div>';
+  });
+
+  // About
+  document.getElementById('aboutName').textContent = s.company_name || 'Bainsla Music Private Limited';
+  document.getElementById('aboutText').textContent = s.about_text || s.description || '';
+  document.getElementById('aboutTagline').textContent = s.tagline || '';
+
+  // Stats
+  const sr = document.getElementById('statsRow');
+  sr.innerHTML = '';
+  const stats = [
+    {num: s.stats_songs || '256+', label: 'Songs'},
+    {num: s.stats_artists || '42+', label: 'Artists'},
+    {num: s.stats_videos || '178+', label: 'Videos'},
+    {num: s.stats_views || '12.8M+', label: 'Views'},
+  ];
+  stats.forEach(st => {
+    sr.innerHTML += '<div class="stat-card"><div class="num">' + st.num + '</div><div class="label">' + st.label + '</div></div>';
+  });
+
+  // Directors
+  const dg = document.getElementById('directorsGrid');
+  dg.innerHTML = '';
+  (DATA.directors || []).forEach(d => {
+    const img = d.image || '';
+    const imgHtml = img ? '<img src="' + img + '" alt="' + d.name + '" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #f59e0b;margin:0 auto 12px" onerror="this.style.display=\'none\'">' : '<div style="width:120px;height:120px;border-radius:50%;background:#222;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:40px;border:3px solid #f59e0b">👔</div>';
+    let social = '';
+    if (d.youtube_url || d.instagram_url || d.facebook_url || d.linkedin_url) {
+      social = '<div class="social-links" style="margin-top:12px">';
+      if (d.youtube_url) social += '<a href="' + d.youtube_url + '" target="_blank">▶</a>';
+      if (d.instagram_url) social += '<a href="' + d.instagram_url + '" target="_blank">📷</a>';
+      if (d.facebook_url) social += '<a href="' + d.facebook_url + '" target="_blank">f</a>';
+      if (d.linkedin_url) social += '<a href="' + d.linkedin_url + '" target="_blank">in</a>';
+      social += '</div>';
+    }
+    dg.innerHTML += '<div class="artist-card reveal" style="text-align:center;padding:24px">' + imgHtml + '<div class="name" style="font-size:16px;font-weight:700;color:#fff">' + (d.name||'') + '</div><div class="role" style="color:#f59e0b;font-size:13px;margin-top:4px">' + (d.role||'') + '</div><div style="color:#888;font-size:12px;margin-top:8px;line-height:1.5">' + (d.description||'') + '</div>' + social + '</div>';
+  });
+
+  // Contact
+  document.getElementById('contactPhone').textContent = s.phone || '';
+  document.getElementById('contactEmail').textContent = s.email || '';
+  var supportEl = document.getElementById('contactSupport');
+  if (supportEl) supportEl.textContent = s.support_email || 'support@bainslamusic.com';
+  document.getElementById('contactAddress').textContent = (s.address || '').replace(/\n/g, ', ');
+  document.getElementById('footerPhone').textContent = s.phone || '';
+  document.getElementById('footerEmail').textContent = s.email || '';
+  document.getElementById('footerAddress').textContent = (s.address || '').replace(/\n/g, ', ');
+  document.getElementById('footerDesc').textContent = s.description || s.tagline || '';
+  if (s.whatsapp) {
+    document.getElementById('whatsappLink').href = 'https://wa.me/' + s.whatsapp;
+  }
+
+  // Hide loading
+  document.getElementById('loading').classList.add('hide');
+
+  // Activate scroll animations
+  setTimeout(initScrollReveal, 100);
+}
+
+function initScrollReveal() {
+  const els = document.querySelectorAll('.reveal,.reveal-left,.reveal-right');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  els.forEach(el => obs.observe(el));
+}
+
+// Navbar scroll
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+function closeMobile() {
+  document.getElementById('mobileMenu').classList.remove('open');
+}
+
+// Contact form
+async function submitContact(e) {
+  e.preventDefault();
+  const form = e.target;
+  const body = {
+    name: form.name.value,
+    email: form.email.value,
+    phone: form.phone.value,
+    type: form.type.value,
+    message: form.message.value
+  };
+  try {
+    const res = await fetch('/api/frontend-data.php', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('Message sent successfully! We will contact you soon.');
+      form.reset();
+    } else {
+      alert('Error: ' + (data.error || 'Something went wrong'));
+    }
+  } catch(err) {
+    alert('Connection error. Please try WhatsApp instead.');
+  }
+}
+
+// Start
+loadSite();
+</script>
+</body>
+</html>

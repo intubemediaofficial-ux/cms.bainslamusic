@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donations — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="sidebar-logo"><img src="../images/logo.png" alt="Logo"><h3>Admin Panel</h3></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="donations.html" class="active"><i class="fas fa-hand-holding-heart"></i> Donations</a>
+      <a href="celebrations.html"><i class="fas fa-birthday-cake"></i> Celebrations</a>
+      <a href="volunteers.html"><i class="fas fa-users"></i> Volunteers</a>
+      <a href="messages.html"><i class="fas fa-envelope"></i> Messages</a>
+      <a href="content.html"><i class="fas fa-images"></i> Content</a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      <a href="../index.html"><i class="fas fa-globe"></i> View Site</a>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Donations</h1>
+      <div class="topbar-right"><span class="admin-name"><i class="fas fa-user-circle"></i> Admin</span></div>
+    </div>
+
+    <!-- Stats (Dynamic) -->
+    <div class="stats-grid">
+      <div class="stat-card stat-blue"><div class="stat-icon"><i class="fas fa-rupee-sign"></i></div><div class="stat-info"><h3 id="dTotal">₹0</h3><p>Total Received</p></div></div>
+      <div class="stat-card stat-green"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h3 id="dCount">0</h3><p>Total Donors</p></div></div>
+      <div class="stat-card stat-purple"><div class="stat-icon"><i class="fas fa-calendar"></i></div><div class="stat-info"><h3 id="dMonth">₹0</h3><p>This Month</p></div></div>
+      <div class="stat-card stat-orange"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-info"><h3 id="dPending">0</h3><p>Pending</p></div></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="card">
+      <div class="toolbar">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Search donor..." id="searchDonor" onkeyup="filterTable()">
+        </div>
+        <div><button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Add Donation</button> <button class="btn btn-success" onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</button></div>
+      </div>
+      <div class="table-container">
+        <table id="donationsTable">
+          <thead><tr><th>S.No</th><th>Donor Name</th><th>Amount</th><th>Date</th><th>Email</th><th>Phone</th><th>Certificate</th><th>Mode</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="donationsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Modal -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Add New Donation</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <form onsubmit="addDonation(event)">
+        <div class="form-group"><label>Donor Name *</label><input type="text" id="donorName" required></div>
+        <div class="form-group"><label>Amount (₹) *</label><input type="number" id="donorAmount" required></div>
+        <div class="form-group"><label>Email</label><input type="email" id="donorEmail"></div>
+        <div class="form-group"><label>Phone</label><input type="text" id="donorPhone"></div>
+        <div class="form-group"><label>Date</label><input type="date" id="donorDate"></div>
+        <div class="form-group"><label>Payment Mode</label>
+          <select id="donorMode"><option>UPI</option><option>Bank Transfer</option><option>Cash</option><option>Cheque</option><option>Online</option></select>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select id="donorStatus"><option>Received</option><option>Pending</option></select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">Save Donation</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    if (sessionStorage.getItem('adminLoggedIn') !== 'true') { window.location.href = 'index.html'; }
+    function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
+
+    let donations = [];
+
+    function renderTable() {
+      const tbody = document.getElementById('donationsBody');
+      tbody.innerHTML = donations.map((d, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${d.name}</strong></td>
+          <td><strong>₹${d.amount.toLocaleString()}</strong></td>
+          <td>${new Date(d.date).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'})}</td>
+          <td>${d.email || '-'}</td>
+          <td>${d.phone || '-'}</td>
+          <td>${d.certificate ? '<span style="color:#1d4ed8;font-weight:600;font-size:0.8rem">' + d.certificate + '</span>' : '-'}</td>
+          <td>${d.mode}</td>
+          <td><span class="badge ${d.status === 'Received' ? 'badge-success' : 'badge-pending'}">${d.status}</span></td>
+          <td><button onclick="deleteDonation(${d.id})" style="border:none;background:none;color:#dc2626;cursor:pointer"><i class="fas fa-trash"></i></button></td>
+        </tr>`).join('');
+    }
+
+    function addDonation(e) {
+      e.preventDefault();
+      const newDonation = {
+        id: Date.now(),
+        name: document.getElementById('donorName').value,
+        amount: parseInt(document.getElementById('donorAmount').value),
+        date: document.getElementById('donorDate').value || new Date().toISOString().split('T')[0],
+        email: document.getElementById('donorEmail').value,
+        phone: document.getElementById('donorPhone').value,
+        mode: document.getElementById('donorMode').value,
+        status: document.getElementById('donorStatus').value
+      };
+      donations.unshift(newDonation);
+      DataAPI.save('donations', donations);
+      renderTable(); updateStats();
+      closeModal();
+      e.target.reset();
+    }
+
+    function deleteDonation(id) {
+      if (confirm('Are you sure you want to delete this donation?')) {
+        donations = donations.filter(d => d.id !== id);
+        DataAPI.save('donations', donations);
+        renderTable(); updateStats();
+      }
+    }
+
+    function filterTable() {
+      const query = document.getElementById('searchDonor').value.toLowerCase();
+      const rows = document.querySelectorAll('#donationsBody tr');
+      rows.forEach(row => { row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none'; });
+    }
+
+    function openModal() { document.getElementById('addModal').classList.add('active'); }
+    function closeModal() { document.getElementById('addModal').classList.remove('active'); }
+
+    function updateStats() {
+      const total = donations.reduce((s, d) => s + d.amount, 0);
+      const now = new Date();
+      const thisMonth = donations.filter(d => { const dt = new Date(d.date); return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear(); });
+      const monthTotal = thisMonth.reduce((s, d) => s + d.amount, 0);
+      const pending = donations.filter(d => d.status === 'Pending').length;
+      document.getElementById('dTotal').textContent = '₹' + total.toLocaleString('en-IN');
+      document.getElementById('dCount').textContent = donations.length;
+      document.getElementById('dMonth').textContent = '₹' + monthTotal.toLocaleString('en-IN');
+      document.getElementById('dPending').textContent = pending;
+    }
+
+    function exportCSV() {
+      if (donations.length === 0) { alert('No data to export'); return; }
+      let csv = 'Name,Amount,Date,Email,Phone,Certificate,Mode,Status\n';
+      donations.forEach(d => { csv += `"${d.name}",${d.amount},${d.date},"${d.email || ''}","${d.phone}","${d.certificate || ''}","${d.mode}","${d.status}"\n`; });
+      const blob = new Blob([csv], {type: 'text/csv'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'donations_' + new Date().toISOString().split('T')[0] + '.csv'; a.click();
+    }
+
+    // Load from server
+    async function init() { donations = await DataAPI.load('donations') || []; renderTable(); updateStats(); }
+    init();
+  </script>
+</body>
+</html>

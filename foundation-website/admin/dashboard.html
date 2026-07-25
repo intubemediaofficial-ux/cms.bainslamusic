@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <img src="../images/logo.png" alt="Logo">
+      <h3>Admin Panel</h3>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="active"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="donations.html"><i class="fas fa-hand-holding-heart"></i> Donations</a>
+      <a href="celebrations.html"><i class="fas fa-birthday-cake"></i> Celebrations</a>
+      <a href="volunteers.html"><i class="fas fa-users"></i> Volunteers</a>
+      <a href="messages.html"><i class="fas fa-envelope"></i> Messages</a>
+      <a href="content.html"><i class="fas fa-images"></i> Content</a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      <a href="../index.html"><i class="fas fa-globe"></i> View Site</a>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <div class="topbar-right">
+        <span class="admin-name"><i class="fas fa-user-circle"></i> Admin</span>
+      </div>
+    </div>
+
+    <!-- Stats Cards (Dynamic) -->
+    <div class="stats-grid">
+      <div class="stat-card stat-blue">
+        <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
+        <div class="stat-info"><h3 id="statDonations">₹0</h3><p>Total Donations</p></div>
+      </div>
+      <div class="stat-card stat-green">
+        <div class="stat-icon"><i class="fas fa-birthday-cake"></i></div>
+        <div class="stat-info"><h3 id="statBookings">0</h3><p>Celebration Bookings</p></div>
+      </div>
+      <div class="stat-card stat-purple">
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+        <div class="stat-info"><h3 id="statVolunteers">0</h3><p>Volunteer Applications</p></div>
+      </div>
+      <div class="stat-card stat-orange">
+        <div class="stat-icon"><i class="fas fa-envelope"></i></div>
+        <div class="stat-info"><h3 id="statMessages">0</h3><p>New Messages</p></div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="content-grid">
+      <div class="card">
+        <div class="card-header"><h3>Recent Donations</h3><a href="donations.html">View All</a></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Name</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody id="recentDonations"><tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:30px">No donations yet. <a href="donations.html">Add first donation</a></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Recent Celebration Bookings</h3><a href="celebrations.html">View All</a></div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Name</th><th>Type</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody id="recentBookings"><tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:30px">No bookings yet. <a href="celebrations.html">Add first booking</a></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-header"><h3>Quick Actions</h3></div>
+      <div class="quick-actions">
+        <a href="donations.html" class="action-btn"><i class="fas fa-plus"></i> Add Donation</a>
+        <a href="celebrations.html" class="action-btn"><i class="fas fa-calendar-plus"></i> New Booking</a>
+        <a href="volunteers.html" class="action-btn"><i class="fas fa-user-plus"></i> Add Volunteer</a>
+        <a href="content.html" class="action-btn"><i class="fas fa-cog"></i> Settings</a>
+        <a href="messages.html" class="action-btn"><i class="fas fa-envelope"></i> View Messages</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    if (sessionStorage.getItem('adminLoggedIn') !== 'true') { window.location.href = 'index.html'; }
+    function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
+
+    async function loadDashboard() {
+      const donations = await DataAPI.load('donations') || [];
+      const bookings = await DataAPI.load('bookings') || [];
+      const volunteers = await DataAPI.load('volunteers') || [];
+      const messages = await DataAPI.load('messages') || [];
+
+      const totalDonations = donations.reduce((sum, d) => sum + (d.amount || 0), 0);
+      document.getElementById('statDonations').textContent = '₹' + totalDonations.toLocaleString('en-IN');
+      document.getElementById('statBookings').textContent = bookings.length;
+      document.getElementById('statVolunteers').textContent = volunteers.length;
+      document.getElementById('statMessages').textContent = messages.filter(m => m.status === 'Unread').length;
+
+      if (donations.length > 0) {
+        document.getElementById('recentDonations').innerHTML = donations.slice(0, 5).map(d => `
+          <tr><td>${d.name}</td><td><strong>₹${d.amount.toLocaleString()}</strong></td>
+          <td>${new Date(d.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+          <td><span class="badge ${d.status==='Received'?'badge-success':'badge-pending'}">${d.status}</span></td></tr>`).join('');
+      }
+      if (bookings.length > 0) {
+        document.getElementById('recentBookings').innerHTML = bookings.slice(0, 5).map(b => `
+          <tr><td>${b.name}</td><td>${b.type}</td>
+          <td>${new Date(b.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+          <td><span class="badge ${b.status==='Completed'?'badge-success':'badge-pending'}">${b.status}</span></td></tr>`).join('');
+      }
+    }
+    loadDashboard();
+  </script>
+</body>
+</html>

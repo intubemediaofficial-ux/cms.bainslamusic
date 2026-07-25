@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bainsla Music — Admin Dashboard</title>
+<link rel="stylesheet" href="dashboard.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ═══════ LOGIN PAGE ═══════ -->
+<div id="loginPage" class="login-page">
+  <div class="login-card">
+    <div class="login-logo-img">♪</div>
+    <div class="login-brand">BAINSLA MUSIC</div>
+    <div class="login-brand-sub">PRIVATE LIMITED</div>
+    <p class="login-sub">Admin Dashboard</p>
+    <form id="loginForm">
+      <div class="login-field">
+        <label>Username</label>
+        <input type="text" id="loginUser" placeholder="Enter username" required>
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="Enter password" required>
+      </div>
+      <button type="submit" class="login-btn">LOGIN</button>
+      <p id="loginError" class="error"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════ DASHBOARD ═══════ -->
+<div id="dashboard" class="dashboard" style="display:none">
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">♪</div>
+      <div class="logo-info">
+        <div class="logo-text">BAINSLA</div>
+        <div class="logo-text2">MUSIC</div>
+        <div class="logo-sub">PRIVATE LIMITED</div>
+      </div>
+    </div>
+
+    <ul class="nav-list">
+      <li class="nav-item active" data-section="overview">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Dashboard</span>
+      </li>
+      <li class="nav-item" data-section="banners">
+        <span class="nav-icon">🖼️</span>
+        <span class="nav-label">Home Banner</span>
+      </li>
+      <li class="nav-item" data-section="artists">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">Artists</span>
+      </li>
+      <li class="nav-item" data-section="releases">
+        <span class="nav-icon">🎵</span>
+        <span class="nav-label">Releases</span>
+      </li>
+      <li class="nav-item" data-section="videos">
+        <span class="nav-icon">📹</span>
+        <span class="nav-label">Videos</span>
+      </li>
+      <li class="nav-item" data-section="catalogue">
+        <span class="nav-icon">📁</span>
+        <span class="nav-label">Music Catalogue</span>
+      </li>
+      <li class="nav-item" data-section="licensing">
+        <span class="nav-icon">©️</span>
+        <span class="nav-label">Licensing</span>
+      </li>
+      <li class="nav-item" data-section="distribution">
+        <span class="nav-icon">🌐</span>
+        <span class="nav-label">Distribution</span>
+      </li>
+      <li class="nav-item" data-section="inquiries">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">Contact Inquiries</span>
+        <span class="nav-badge" id="inquiryBadge"></span>
+      </li>
+      <li class="nav-item" data-section="analytics">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Analytics</span>
+      </li>
+      <li class="nav-item" data-section="directors">
+        <span class="nav-icon">👔</span>
+        <span class="nav-label">Directors & Team</span>
+      </li>
+      <li class="nav-item" data-section="settings">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Settings</span>
+      </li>
+    </ul>
+
+    <div class="sidebar-profile">
+      <div class="profile-avatar">🎧</div>
+      <div class="profile-info">
+        <div class="profile-name">Welcome Admin</div>
+        <div class="profile-role">Bainsla Music</div>
+      </div>
+      <button class="profile-btn" onclick="window.open('/', '_blank')">VIEW PROFILE</button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="top-left">
+        <button class="hamburger" id="hamburgerBtn">☰</button>
+        <div class="top-title-wrap">
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSubtitle" class="page-subtitle">Welcome back, Admin! Here's what's happening with Bainsla Music.</p>
+        </div>
+      </div>
+      <div class="top-right">
+        <button class="top-icon-btn" title="Notifications">🔔<span class="notif-dot">5</span></button>
+        <div class="admin-profile">
+          <div class="admin-avatar">👤</div>
+          <div class="admin-info">
+            <span class="admin-name">Admin</span>
+            <span class="admin-role">Super Admin</span>
+          </div>
+          <button class="admin-dropdown" id="adminDropdown">▾</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dynamic Content Area -->
+    <div id="contentArea" class="content-area"></div>
+
+    <!-- Footer -->
+    <footer class="admin-footer">
+      <p>&copy; 2024 Bainsla Music Private Limited. All Rights Reserved.</p>
+      <p class="footer-right">Made with ❤️ for Devotional Music</p>
+    </footer>
+  </main>
+</div>
+
+<!-- Admin Dropdown Menu -->
+<div class="dropdown-menu" id="dropdownMenu" style="display:none">
+  <a href="/" target="_blank">🌐 View Website</a>
+  <a href="#" id="logoutBtn">🚪 Logout</a>
+</div>
+
+<script src="dashboard.js"></script>
+</body>
+</html>

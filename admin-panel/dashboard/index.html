@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Bainsla Music Private Limited</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#0a0a0a;color:#e5e5e5;min-height:100vh}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+
+/* Header */
+.header{background:#111;border-bottom:1px solid #222;padding:16px 0;position:sticky;top:0;z-index:100}
+.header-inner{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+.logo-text{font-weight:900;font-size:18px;color:#fff}
+.logo-sub{font-size:8px;color:#f59e0b;letter-spacing:3px;font-weight:700}
+.header-links{display:flex;gap:8px;align-items:center}
+.header-links a{padding:8px 16px;font-size:12px;font-weight:600;color:#999;border-radius:6px;transition:all .2s;letter-spacing:.5px}
+.header-links a:hover{color:#f59e0b;background:rgba(245,158,11,.05)}
+.header-links .active{color:#f59e0b;background:rgba(245,158,11,.1)}
+.admin-btn{padding:8px 20px!important;background:#f59e0b!important;color:#000!important;font-weight:700!important;border-radius:8px!important}
+.admin-btn:hover{background:#d97706!important}
+
+/* Tabs */
+.tabs{max-width:1200px;margin:0 auto;padding:20px 20px 0;display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid #222}
+.tab{padding:10px 20px;font-size:13px;font-weight:600;color:#666;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab:hover{color:#f59e0b}
+.tab.active{color:#f59e0b;border-bottom-color:#f59e0b}
+
+/* Content */
+.content{max-width:1200px;margin:0 auto;padding:20px}
+.section-title{font-size:24px;font-weight:800;margin-bottom:4px}
+.section-title span{color:#f59e0b}
+.section-sub{font-size:13px;color:#666;margin-bottom:20px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat{background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:center}
+.stat-num{font-size:32px;font-weight:900;color:#f59e0b}
+.stat-label{font-size:12px;color:#888;margin-top:4px;text-transform:uppercase;letter-spacing:1px}
+
+/* Cards Grid */
+.grid{display:grid;gap:16px;margin-bottom:24px}
+.grid-2{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.grid-4{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+
+/* Release Card */
+.release-card{background:#111;border:1px solid #222;border-radius:12px;overflow:hidden;transition:all .3s}
+.release-card:hover{border-color:#f59e0b;transform:translateY(-2px)}
+.release-card img{width:100%;height:180px;object-fit:cover}
+.release-card .info{padding:14px}
+.release-card .hindi{font-weight:700;font-size:15px;margin-bottom:2px}
+.release-card .eng{font-size:12px;color:#888}
+.release-card .artist{font-size:12px;color:#f59e0b;margin-top:6px;font-weight:600}
+.release-card .meta{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.release-card .badge{font-size:10px;padding:3px 8px;border-radius:4px;background:rgba(245,158,11,.1);color:#f59e0b;font-weight:600}
+
+/* Artist Card */
+.artist-card{background:#111;border:1px solid #222;border-radius:12px;padding:20px;text-align:center;transition:all .3s}
+.artist-card:hover{border-color:#f59e0b;transform:translateY(-2px)}
+.artist-card img{width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:3px solid #f59e0b}
+.artist-card .placeholder{width:80px;height:80px;border-radius:50%;background:#222;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px}
+.artist-card .name{font-weight:700;font-size:16px;color:#fff}
+.artist-card .role{font-size:12px;color:#f59e0b;font-weight:600;margin-top:2px}
+.artist-card .genre{font-size:11px;color:#666;margin-top:4px}
+.artist-card .social{display:flex;gap:6px;justify-content:center;margin-top:10px}
+.artist-card .social a{width:28px;height:28px;border-radius:50%;background:#222;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .2s}
+.artist-card .social a:hover{background:#f59e0b;color:#000}
+
+/* Video Card */
+.video-card{background:#111;border:1px solid #222;border-radius:12px;overflow:hidden;transition:all .3s}
+.video-card:hover{border-color:#f59e0b;transform:translateY(-2px)}
+.video-card .thumb{position:relative}
+.video-card .thumb img{width:100%;height:160px;object-fit:cover}
+.video-card .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);opacity:0;transition:all .3s}
+.video-card:hover .play{opacity:1}
+.video-card .play span{width:48px;height:48px;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:18px;color:#000}
+.video-card .vmeta{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;padding:6px 10px;background:linear-gradient(transparent,rgba(0,0,0,.8));font-size:11px;color:#fff}
+.video-card .vinfo{padding:12px}
+.video-card .vtitle{font-weight:700;font-size:14px}
+.video-card .vcat{font-size:11px;color:#888;margin-top:4px}
+
+/* Catalogue */
+.cat-card{background:#111;border:1px solid #222;border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;transition:all .3s}
+.cat-card:hover{border-color:#f59e0b}
+.cat-card .icon{font-size:24px}
+.cat-card .cname{flex:1;font-weight:600;font-size:14px}
+.cat-card .hindi{font-size:11px;color:#666}
+.cat-card .count{font-size:20px;font-weight:900;color:#f59e0b}
+
+/* Licensing Card */
+.lic-card{background:#111;border:1px solid #222;border-radius:12px;padding:20px;transition:all .3s}
+.lic-card:hover{border-color:#f59e0b}
+.lic-card .ltitle{font-weight:700;font-size:15px;margin-bottom:6px}
+.lic-card .ldesc{font-size:12px;color:#888;line-height:1.5}
+
+/* Distribution */
+.dist-tags{display:flex;flex-wrap:wrap;gap:8px}
+.dist-tag{padding:8px 16px;background:#111;border:1px solid #222;border-radius:20px;font-size:12px;font-weight:600;transition:all .2s}
+.dist-tag:hover{border-color:#f59e0b;color:#f59e0b}
+
+/* Inquiries Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid #1a1a1a;font-size:13px}
+th{color:#888;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+td{color:#ccc}
+
+/* Contact Form */
+.inquiry-form{background:#111;border:1px solid #222;border-radius:12px;padding:24px;max-width:600px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#888;margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;background:#0a0a0a;border:1px solid #333;border-radius:8px;color:#fff;font-size:13px;font-family:inherit}
+.form-group textarea{height:100px;resize:vertical}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#f59e0b}
+.submit-btn{padding:12px 28px;background:#f59e0b;color:#000;font-weight:700;font-size:14px;border:none;border-radius:8px;cursor:pointer;letter-spacing:.5px}
+.submit-btn:hover{background:#d97706}
+
+/* Info card */
+.info-row{display:flex;gap:12px;margin-bottom:12px;align-items:flex-start}
+.info-icon{font-size:18px;margin-top:2px}
+.info-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px}
+.info-value{font-size:14px;color:#fff;margin-top:2px}
+
+/* Tab panels */
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Responsive */
+@media(max-width:768px){
+  .header-links{display:none}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(2,1fr)}
+  .tabs{overflow-x:auto;flex-wrap:nowrap}
+  .tab{white-space:nowrap;font-size:12px;padding:8px 14px}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-inner">
+    <a href="/" class="logo">
+      <div class="logo-icon">🎵</div>
+      <div>
+        <div class="logo-text">BAINSLA MUSIC</div>
+        <div class="logo-sub">PRIVATE LIMITED</div>
+      </div>
+    </a>
+    <div class="header-links">
+      <a href="/">HOME</a>
+      <a href="/dashboard/" class="active">DASHBOARD</a>
+      <a href="/admin/" class="admin-btn">ADMIN LOGIN</a>
+    </div>
+  </div>
+</header>
+
+<!-- Tabs -->
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="overview">Overview</div>
+  <div class="tab" data-tab="releases">Latest Releases</div>
+  <div class="tab" data-tab="artists">Artists</div>
+  <div class="tab" data-tab="videos">Videos</div>
+  <div class="tab" data-tab="catalogue">Music Catalogue</div>
+  <div class="tab" data-tab="licensing">Licensing</div>
+  <div class="tab" data-tab="distribution">Distribution</div>
+  <div class="tab" data-tab="contact">Contact / Inquiry</div>
+</div>
+
+<!-- Content -->
+<div class="content" id="content">
+  <div style="text-align:center;padding:60px 20px;color:#666">Loading dashboard data...</div>
+</div>
+
+<script>
+const API = '/api/data.php?section=public';
+let DATA = {};
+let currentTab = 'overview';
+
+async function loadData() {
+  try {
+    const res = await fetch(API);
+    DATA = await res.json();
+    renderTab(currentTab);
+  } catch(e) {
+    document.getElementById('content').innerHTML = '<div style="text-align:center;padding:60px;color:#ef4444">Failed to load data. Please refresh.</div>';
+  }
+}
+
+// Tab clicks
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    currentTab = t.dataset.tab;
+    renderTab(currentTab);
+  });
+});
+
+function renderTab(tab) {
+  const c = document.getElementById('content');
+  switch(tab) {
+    case 'overview': renderOverview(c); break;
+    case 'releases': renderReleases(c); break;
+    case 'artists': renderArtists(c); break;
+    case 'videos': renderVideos(c); break;
+    case 'catalogue': renderCatalogue(c); break;
+    case 'licensing': renderLicensing(c); break;
+    case 'distribution': renderDistribution(c); break;
+    case 'contact': renderContact(c); break;
+  }
+}
+
+function renderOverview(c) {
+  const s = DATA.settings || {};
+  const releases = DATA.releases || [];
+  const artists = DATA.artists || [];
+  const videos = DATA.videos || [];
+  const catalogue = DATA.catalogue || [];
+  const totalSongs = catalogue.reduce((a, x) => a + (x.count || 0), 0);
+
+  c.innerHTML = `
+    <h2 class="section-title">Dashboard <span>Overview</span></h2>
+    <p class="section-sub">${s.company_name || 'Bainsla Music Private Limited'} — ${s.tagline || ''}</p>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-num">${s.stats_songs || totalSongs}</div><div class="stat-label">Total Songs</div></div>
+      <div class="stat"><div class="stat-num">${s.stats_artists || artists.length}</div><div class="stat-label">Total Artists</div></div>
+      <div class="stat"><div class="stat-num">${s.stats_videos || videos.length}</div><div class="stat-label">YouTube Videos</div></div>
+      <div class="stat"><div class="stat-num">${s.stats_views || '12.8M+'}</div><div class="stat-label">Total Views</div></div>
+    </div>
+
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:12px">Latest Releases</h3>
+    <div class="grid grid-3" style="margin-bottom:24px">
+      ${releases.slice(0, 6).map(r => `
+        <a href="${r.url || '#'}" target="_blank" class="release-card">
+          ${r.image ? `<img src="${r.image}" alt="${r.hindi_title || ''}" onerror="this.style.display='none'">` : ''}
+          <div class="info">
+            <div class="hindi">${r.hindi_title || ''}</div>
+            <div class="eng">${r.eng_title || ''}</div>
+            <div class="artist">${r.artist || r.label || 'Bainsla Music'}</div>
+          </div>
+        </a>
+      `).join('')}
+    </div>
+
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:12px">Our Artists</h3>
+    <div class="grid grid-4" style="margin-bottom:24px">
+      ${artists.slice(0, 8).map(a => `
+        <div class="artist-card">
+          ${a.image ? `<img src="${a.image}" alt="${a.name}" onerror="this.style.display='none'">` : '<div class="placeholder">👤</div>'}
+          <div class="name">${a.name}</div>
+          <div class="role">${a.role || ''}</div>
+          <div class="genre">${a.genre || ''}</div>
+          ${(a.youtube_url || a.instagram_url || a.facebook_url || a.spotify_url) ? `<div class="social">
+            ${a.youtube_url ? `<a href="${a.youtube_url}" target="_blank">▶</a>` : ''}
+            ${a.instagram_url ? `<a href="${a.instagram_url}" target="_blank">📷</a>` : ''}
+            ${a.facebook_url ? `<a href="${a.facebook_url}" target="_blank">f</a>` : ''}
+            ${a.spotify_url ? `<a href="${a.spotify_url}" target="_blank">♪</a>` : ''}
+          </div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:12px">Music Catalogue</h3>
+    <div class="grid grid-4">
+      ${catalogue.map(cat => `
+        <div class="cat-card">
+          <div class="icon">🎵</div>
+          <div><div class="cname">${cat.name}</div>${cat.hindi ? `<div class="hindi">${cat.hindi}</div>` : ''}</div>
+          <div class="count">${cat.count || 0}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderReleases(c) {
+  const releases = DATA.releases || [];
+  c.innerHTML = `
+    <h2 class="section-title">Latest <span>Releases</span></h2>
+    <p class="section-sub">${releases.length} releases published by Bainsla Music</p>
+    <div class="grid grid-3">
+      ${releases.map(r => `
+        <a href="${r.url || '#'}" target="_blank" class="release-card">
+          ${r.image ? `<img src="${r.image}" alt="${r.hindi_title || ''}" onerror="this.style.display='none'">` : ''}
+          <div class="info">
+            <div class="hindi">${r.hindi_title || ''}</div>
+            <div class="eng">${r.eng_title || ''}</div>
+            <div class="artist">${r.artist || r.label || 'Bainsla Music'}</div>
+            <div class="meta">
+              <span class="badge">${r.category || 'Devotional'}</span>
+              ${r.release_date ? `<span class="badge">${r.release_date}</span>` : ''}
+            </div>
+          </div>
+        </a>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderArtists(c) {
+  const artists = DATA.artists || [];
+  c.innerHTML = `
+    <h2 class="section-title">Our <span>Artists</span></h2>
+    <p class="section-sub">${artists.length} talented artists bringing devotional music to life</p>
+    <div class="grid grid-4">
+      ${artists.map(a => `
+        <div class="artist-card">
+          ${a.image ? `<img src="${a.image}" alt="${a.name}" onerror="this.style.display='none'">` : '<div class="placeholder">👤</div>'}
+          <div class="name">${a.name}</div>
+          <div class="role">${a.role || ''}</div>
+          <div class="genre">${a.genre || ''}</div>
+          ${(a.youtube_url || a.instagram_url || a.facebook_url || a.spotify_url) ? `<div class="social">
+            ${a.youtube_url ? `<a href="${a.youtube_url}" target="_blank" title="YouTube">▶</a>` : ''}
+            ${a.instagram_url ? `<a href="${a.instagram_url}" target="_blank" title="Instagram">📷</a>` : ''}
+            ${a.facebook_url ? `<a href="${a.facebook_url}" target="_blank" title="Facebook">f</a>` : ''}
+            ${a.spotify_url ? `<a href="${a.spotify_url}" target="_blank" title="Spotify">♪</a>` : ''}
+          </div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderVideos(c) {
+  const videos = DATA.videos || [];
+  c.innerHTML = `
+    <h2 class="section-title">Latest <span>Videos</span></h2>
+    <p class="section-sub">${videos.length} devotional music videos on YouTube</p>
+    <div class="grid grid-3">
+      ${videos.map(v => {
+        const thumb = v.thumbnail || (v.youtube_id ? 'https://img.youtube.com/vi/' + v.youtube_id + '/hqdefault.jpg' : '');
+        const url = v.youtube_id ? 'https://www.youtube.com/watch?v=' + v.youtube_id : '#';
+        return `
+          <a href="${url}" target="_blank" class="video-card">
+            <div class="thumb">
+              <img src="${thumb}" alt="${v.hindi_title || ''}" onerror="this.style.display='none'">
+              <div class="play"><span>▶</span></div>
+              <div class="vmeta"><span>${v.duration || ''}</span><span>${v.views || ''} views</span></div>
+            </div>
+            <div class="vinfo">
+              <div class="vtitle">${v.hindi_title || v.eng_title || ''}</div>
+              <div class="vcat">${v.category || 'Devotional'} • Bainsla Music</div>
+            </div>
+          </a>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderCatalogue(c) {
+  const catalogue = DATA.catalogue || [];
+  const total = catalogue.reduce((a, x) => a + (x.count || 0), 0);
+  c.innerHTML = `
+    <h2 class="section-title">Music <span>Catalogue</span></h2>
+    <p class="section-sub">${total} songs across ${catalogue.length} categories</p>
+    <div class="grid grid-2">
+      ${catalogue.map(cat => `
+        <div class="cat-card">
+          <div class="icon">🎵</div>
+          <div style="flex:1">
+            <div class="cname">${cat.name}</div>
+            ${cat.hindi ? `<div class="hindi">${cat.hindi}</div>` : ''}
+          </div>
+          <div class="count">${cat.count || 0}</div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="stat" style="text-align:center;margin-top:20px">
+      <div class="stat-num">${total}</div>
+      <div class="stat-label">Total Songs in Catalogue</div>
+    </div>
+  `;
+}
+
+function renderLicensing(c) {
+  const licensing = DATA.licensing || [];
+  c.innerHTML = `
+    <h2 class="section-title">Licensing & <span>Copyright</span></h2>
+    <p class="section-sub">Professional licensing solutions for music usage</p>
+    <div class="grid grid-3">
+      ${licensing.map(l => `
+        <div class="lic-card">
+          <div class="ltitle">${l.title || ''}</div>
+          <div class="ldesc">${l.description || ''}</div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="margin-top:20px;padding:16px;background:#111;border:1px solid #222;border-radius:12px">
+      <p style="font-size:13px;color:#888">For licensing inquiries, please <a href="#" onclick="document.querySelector('[data-tab=contact]').click();return false" style="color:#f59e0b;font-weight:600">contact us</a> or email <a href="mailto:${(DATA.settings||{}).email||'bainslamusiccompany@gmail.com'}" style="color:#f59e0b">${(DATA.settings||{}).email||'bainslamusiccompany@gmail.com'}</a></p>
+    </div>
+  `;
+}
+
+function renderDistribution(c) {
+  const platforms = ['YouTube Music', 'Spotify', 'Apple Music', 'JioSaavn', 'Wynk Music', 'Gaana', 'Amazon Music', 'Hungama', 'Resso', 'Instagram Music', 'Facebook Music', 'TikTok', 'Tidal', 'Deezer', 'Napster', 'Anghami'];
+  const dist = DATA.distribution || [];
+  c.innerHTML = `
+    <h2 class="section-title">Distribution <span>Partners</span></h2>
+    <p class="section-sub">Available on all major music platforms worldwide</p>
+    <div class="dist-tags">
+      ${platforms.map(p => `<span class="dist-tag">${p}</span>`).join('')}
+      <span class="dist-tag" style="background:#f59e0b;color:#000;border-color:#f59e0b;font-weight:700">150+ More</span>
+    </div>
+    ${dist.length > 0 ? `
+      <div style="margin-top:24px">
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">Distribution Details</h3>
+        <div class="grid grid-2">
+          ${dist.map(d => `<div class="lic-card"><div class="ltitle">${d.title || d.name || ''}</div><div class="ldesc">${d.description || ''}</div></div>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+}
+
+function renderContact(c) {
+  const s = DATA.settings || {};
+  c.innerHTML = `
+    <h2 class="section-title">Contact & <span>Inquiry</span></h2>
+    <p class="section-sub">Get in touch for inquiries, licensing, and collaborations</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div class="inquiry-form">
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">Send us a message</h3>
+        <form id="contactForm" onsubmit="submitInquiry(event)">
+          <div class="form-group"><label>Full Name</label><input type="text" name="name" required placeholder="Enter your name"></div>
+          <div class="form-group"><label>Email Address</label><input type="email" name="email" required placeholder="Enter your email"></div>
+          <div class="form-group"><label>Phone Number</label><input type="tel" name="phone" placeholder="Enter your phone"></div>
+          <div class="form-group"><label>Inquiry Type</label>
+            <select name="type">
+              <option>General Inquiry</option>
+              <option>Song Licensing</option>
+              <option>Copyright Claim</option>
+              <option>Collaboration</option>
+              <option>Distribution</option>
+              <option>Channel Management</option>
+              <option>Submit Song</option>
+              <option>Business</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Message</label><textarea name="message" required placeholder="Type your message here..."></textarea></div>
+          <button type="submit" class="submit-btn">Send Message</button>
+        </form>
+      </div>
+      <div>
+        <div style="background:#111;border:1px solid #222;border-radius:12px;padding:24px">
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">Contact Information</h3>
+          <div class="info-row"><div class="info-icon">📞</div><div><div class="info-label">Phone</div><div class="info-value">${s.phone || ''}</div></div></div>
+          <div class="info-row"><div class="info-icon">✉</div><div><div class="info-label">Email</div><div class="info-value">${s.email || ''}</div></div></div>
+          <div class="info-row"><div class="info-icon">📍</div><div><div class="info-label">Address</div><div class="info-value">${(s.address || '').replace(/\n/g, '<br>')}</div></div></div>
+          ${s.whatsapp ? `<div class="info-row"><div class="info-icon">💬</div><div><div class="info-label">WhatsApp</div><div class="info-value"><a href="https://wa.me/${s.whatsapp}" target="_blank" style="color:#f59e0b">Chat on WhatsApp</a></div></div></div>` : ''}
+          <div style="margin-top:16px;display:flex;gap:8px">
+            ${s.youtube_url ? `<a href="${s.youtube_url}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#222;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s" title="YouTube">▶</a>` : ''}
+            ${s.instagram_url ? `<a href="${s.instagram_url}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#222;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s" title="Instagram">📷</a>` : ''}
+            ${s.facebook_url ? `<a href="${s.facebook_url}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#222;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s" title="Facebook">f</a>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function submitInquiry(e) {
+  e.preventDefault();
+  const form = e.target;
+  const body = {
+    name: form.name.value,
+    email: form.email.value,
+    phone: form.phone.value,
+    type: form.type.value,
+    message: form.message.value
+  };
+  try {
+    const res = await fetch('/api/frontend-data.php', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('Message sent successfully! We will contact you soon.');
+      form.reset();
+    } else {
+      alert('Error: ' + (data.error || 'Something went wrong'));
+    }
+  } catch(err) {
+    alert('Connection error. Please try WhatsApp instead.');
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>

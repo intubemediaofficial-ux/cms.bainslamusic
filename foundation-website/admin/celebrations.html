@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Celebrations — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="sidebar-logo"><img src="../images/logo.png" alt="Logo"><h3>Admin Panel</h3></div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="donations.html"><i class="fas fa-hand-holding-heart"></i> Donations</a>
+      <a href="celebrations.html" class="active"><i class="fas fa-birthday-cake"></i> Celebrations</a>
+      <a href="volunteers.html"><i class="fas fa-users"></i> Volunteers</a>
+      <a href="messages.html"><i class="fas fa-envelope"></i> Messages</a>
+      <a href="content.html"><i class="fas fa-images"></i> Content</a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      <a href="../index.html"><i class="fas fa-globe"></i> View Site</a>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <h1>Celebration Bookings</h1>
+      <div class="topbar-right"><span class="admin-name"><i class="fas fa-user-circle"></i> Admin</span></div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card stat-blue"><div class="stat-icon"><i class="fas fa-birthday-cake"></i></div><div class="stat-info"><h3 id="bTotal">0</h3><p>Total Bookings</p></div></div>
+      <div class="stat-card stat-green"><div class="stat-icon"><i class="fas fa-check"></i></div><div class="stat-info"><h3 id="bCompleted">0</h3><p>Completed</p></div></div>
+      <div class="stat-card stat-orange"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-info"><h3 id="bUpcoming">0</h3><p>Upcoming</p></div></div>
+      <div class="stat-card stat-purple"><div class="stat-icon"><i class="fas fa-rupee-sign"></i></div><div class="stat-info"><h3 id="bRevenue">₹0</h3><p>Revenue</p></div></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="Search booking..." id="searchBooking" onkeyup="filterTable()"></div>
+        <button class="btn btn-primary" onclick="openModal()"><i class="fas fa-plus"></i> Add Booking</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>S.No</th><th>Name</th><th>Type</th><th>Package</th><th>Date</th><th>Phone</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="bookingsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Add New Booking</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <form onsubmit="addBooking(event)">
+        <div class="form-group"><label>Person Name *</label><input type="text" id="bookName" required></div>
+        <div class="form-group"><label>Type *</label>
+          <select id="bookType"><option>Birthday</option><option>Anniversary</option><option>Baby Shower</option><option>Achievement</option><option>In Memory</option><option>Festival</option></select>
+        </div>
+        <div class="form-group"><label>Package *</label>
+          <select id="bookPackage"><option value="Joy - ₹2,100">Joy (₹2,100 / 10 Kids)</option><option value="Happiness - ₹5,100">Happiness (₹5,100 / 25 Kids)</option><option value="Grand - ₹11,000">Grand (₹11,000 / 50+ Kids)</option></select>
+        </div>
+        <div class="form-group"><label>Date *</label><input type="date" id="bookDate" required></div>
+        <div class="form-group"><label>Phone *</label><input type="text" id="bookPhone" required></div>
+        <div class="form-group"><label>Special Message</label><textarea id="bookMsg" placeholder="e.g. Happy Birthday Ravi!"></textarea></div>
+        <div class="form-group"><label>Status</label>
+          <select id="bookStatus"><option>Upcoming</option><option>Completed</option><option>Cancelled</option></select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">Save Booking</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    if (sessionStorage.getItem('adminLoggedIn') !== 'true') { window.location.href = 'index.html'; }
+    function logout() { sessionStorage.clear(); window.location.href = 'index.html'; }
+
+    let bookings = [];
+
+    function renderTable() {
+      const tbody = document.getElementById('bookingsBody');
+      tbody.innerHTML = bookings.map((b, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${b.name}</strong></td>
+          <td>${b.type}</td>
+          <td>${b.package}</td>
+          <td>${new Date(b.date).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'})}</td>
+          <td>${b.phone}</td>
+          <td><strong>${b.package.split(' - ')[1]}</strong></td>
+          <td><span class="badge ${b.status === 'Completed' ? 'badge-success' : b.status === 'Cancelled' ? 'badge-danger' : 'badge-pending'}">${b.status}</span></td>
+          <td><button onclick="deleteBooking(${b.id})" style="border:none;background:none;color:#dc2626;cursor:pointer"><i class="fas fa-trash"></i></button></td>
+        </tr>`).join('');
+    }
+
+    function addBooking(e) {
+      e.preventDefault();
+      const newBooking = {
+        id: Date.now(),
+        name: document.getElementById('bookName').value,
+        type: document.getElementById('bookType').value,
+        package: document.getElementById('bookPackage').value,
+        date: document.getElementById('bookDate').value,
+        phone: document.getElementById('bookPhone').value,
+        msg: document.getElementById('bookMsg').value,
+        status: document.getElementById('bookStatus').value
+      };
+      bookings.unshift(newBooking);
+      DataAPI.save('bookings', bookings);
+      renderTable(); updateStats();
+      closeModal();
+      e.target.reset();
+    }
+
+    function deleteBooking(id) {
+      if (confirm('Delete this booking?')) {
+        bookings = bookings.filter(b => b.id !== id);
+        DataAPI.save('bookings', bookings);
+        renderTable(); updateStats();
+      }
+    }
+
+    function filterTable() {
+      const query = document.getElementById('searchBooking').value.toLowerCase();
+      document.querySelectorAll('#bookingsBody tr').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none'; });
+    }
+
+    function openModal() { document.getElementById('addModal').classList.add('active'); }
+    function closeModal() { document.getElementById('addModal').classList.remove('active'); }
+
+    function updateStats() {
+      document.getElementById('bTotal').textContent = bookings.length;
+      document.getElementById('bCompleted').textContent = bookings.filter(b => b.status === 'Completed').length;
+      document.getElementById('bUpcoming').textContent = bookings.filter(b => b.status === 'Upcoming').length;
+      const prices = {'Joy - ₹2,100': 2100, 'Happiness - ₹5,100': 5100, 'Grand - ₹11,000': 11000};
+      const revenue = bookings.reduce((s, b) => s + (prices[b.package] || 0), 0);
+      document.getElementById('bRevenue').textContent = '₹' + revenue.toLocaleString('en-IN');
+    }
+
+    async function init() { bookings = await DataAPI.load('bookings') || []; renderTable(); updateStats(); }
+    init();
+  </script>
+</body>
+</html>
