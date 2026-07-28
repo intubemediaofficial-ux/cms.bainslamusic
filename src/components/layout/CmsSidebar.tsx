@@ -60,7 +60,7 @@ export default function CmsSidebar() {
         collapsed ? "w-[72px]" : "w-[240px]"
       )}
     >
-      {/* InTubeMedia Header */}
+      {/* Bainsla Music Header */}
       <div className="h-[56px] flex items-center px-3 shrink-0">
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -71,7 +71,7 @@ export default function CmsSidebar() {
         {!collapsed && (
           <Link href="/cms-dashboard" className="flex items-center gap-2 ml-3">
             <InTubeMediaMark className="w-7 h-7 rounded-lg" textClassName="text-[8px]" />
-            <span className="text-sm font-bold text-slate-900">InTubeMedia CMS</span>
+            <span className="text-sm font-bold text-slate-900">Bainsla Music CMS</span>
           </Link>
         )}
       </div>

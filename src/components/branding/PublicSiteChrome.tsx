@@ -19,7 +19,7 @@ export function PublicHeader({ active }: PublicHeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-3 shrink-0">
           <InTubeMediaMark className="w-10 h-10" textClassName="text-sm" />
-          <span className="text-xl font-bold text-gray-900">InTubeMedia</span>
+          <span className="text-xl font-bold text-gray-900">Bainsla Music</span>
         </Link>
         <nav className="hidden sm:flex items-center gap-6 text-sm text-gray-600">
           {navigation.map((item) => (
@@ -56,7 +56,7 @@ export function PublicFooter() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-5">
           <div className="flex items-center gap-2">
             <InTubeMediaMark className="w-8 h-8 rounded-lg" textClassName="text-[11px]" />
-            <span className="font-semibold text-gray-700">InTubeMedia</span>
+            <span className="font-semibold text-gray-700">Bainsla Music</span>
           </div>
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-gray-500">
             <Link href="/about" className="hover:text-gray-700">About</Link>
@@ -65,7 +65,7 @@ export function PublicFooter() {
             <Link href="/privacy-policy" className="hover:text-gray-700">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-gray-700">Terms</Link>
           </div>
-          <p className="text-sm text-gray-400">© {new Date().getFullYear()} InTubeMedia</p>
+          <p className="text-sm text-gray-400">© {new Date().getFullYear()} Bainsla Music</p>
         </div>
         <div className="mt-6 flex justify-center border-t border-gray-100 pt-5">
           <YouTubeAttribution />

@@ -15,7 +15,7 @@ function getOtpHtml(otp: string): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
       <div style="text-align: center; margin-bottom: 20px;">
-        <h2 style="color: #1a1a1a; margin: 0;">InTubeMedia</h2>
+        <h2 style="color: #1a1a1a; margin: 0;">Bainsla Music</h2>
         <p style="color: #666; font-size: 14px;">Password Reset / Login Verification</p>
       </div>
       <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px;">
@@ -37,9 +37,9 @@ async function sendViaResend(to: string, otp: string): Promise<{ success: boolea
   const fromEmail = process.env.OTP_FROM_EMAIL || "onboarding@resend.dev";
 
   const result = await resend.emails.send({
-    from: `InTubeMedia <${fromEmail}>`,
+    from: `Bainsla Music <${fromEmail}>`,
     to,
-    subject: "Your InTubeMedia OTP",
+    subject: "Your Bainsla Music OTP",
     html: getOtpHtml(otp),
   });
 
@@ -74,9 +74,9 @@ async function sendViaSMTP(to: string, otp: string): Promise<{ success: boolean;
 
   try {
     await transporter.sendMail({
-      from: `InTubeMedia <${fromEmail}>`,
+      from: `Bainsla Music <${fromEmail}>`,
       to,
-      subject: "Your InTubeMedia OTP",
+      subject: "Your Bainsla Music OTP",
       html: getOtpHtml(otp),
     });
     return { success: true };

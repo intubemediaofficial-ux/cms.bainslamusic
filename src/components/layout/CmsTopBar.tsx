@@ -55,7 +55,7 @@ export default function CmsTopBar() {
                       B
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[14px] font-medium text-[#282828] truncate">InTubeMedia</p>
+                      <p className="text-[14px] font-medium text-[#282828] truncate">Bainsla Music</p>
                       <p className="text-[12px] text-[#606060] truncate">Content Manager</p>
                     </div>
                   </div>

@@ -536,7 +536,7 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="text"
-                defaultValue="InTubeMedia"
+                defaultValue="Bainsla Music"
                 className="w-full px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>

@@ -3,36 +3,36 @@ import { PublicFooter, PublicHeader } from "@/components/branding/PublicSiteChro
 
 const faqs = [
   {
-    question: "What is InTubeMedia?",
-    answer: "InTubeMedia is a YouTube Channel Management System (CMS) designed for content creators, music labels, and multi-channel networks (MCNs). It helps you track revenue, manage videos, monitor analytics, handle payments, and distribute music — all from one dashboard."
+    question: "What is Bainsla Music?",
+    answer: "Bainsla Music is a YouTube Channel Management System (CMS) designed for content creators, music labels, and multi-channel networks (MCNs). It helps you track revenue, manage videos, monitor analytics, handle payments, and distribute music — all from one dashboard."
   },
   {
     question: "How do I create an account?",
-    answer: "You can create an InTubeMedia account with your email and a separate CMS password, or use Google Sign-In hosted by Google. New accounts require admin approval. A local CMS password is not a Google or YouTube password, and CMS login does not itself authorize a YouTube channel."
+    answer: "You can create an Bainsla Music account with your email and a separate CMS password, or use Google Sign-In hosted by Google. New accounts require admin approval. A local CMS password is not a Google or YouTube password, and CMS login does not itself authorize a YouTube channel."
   },
   {
-    question: "Is InTubeMedia free to use?",
-    answer: "InTubeMedia is available for content creators and music labels who are part of our network. Contact us to learn about partnership opportunities and pricing."
+    question: "Is Bainsla Music free to use?",
+    answer: "Bainsla Music is available for content creators and music labels who are part of our network. Contact us to learn about partnership opportunities and pricing."
   },
   {
-    question: "How does InTubeMedia access my YouTube data?",
-    answer: "We use Google-hosted OAuth 2.0 and the YouTube Data API and YouTube Analytics API. The channel owner or authorized manager reviews the exact permissions, confirms channel authority, and then signs in only on accounts.google.com. InTubeMedia never asks for or receives a Google or YouTube password. Access can be revoked in the CMS or through Google account permissions."
+    question: "How does Bainsla Music access my YouTube data?",
+    answer: "We use Google-hosted OAuth 2.0 and the YouTube Data API and YouTube Analytics API. The channel owner or authorized manager reviews the exact permissions, confirms channel authority, and then signs in only on accounts.google.com. Bainsla Music never asks for or receives a Google or YouTube password. Access can be revoked in the CMS or through Google account permissions."
   },
   {
-    question: "What YouTube data does InTubeMedia access?",
+    question: "What YouTube data does Bainsla Music access?",
     answer: "With your permission, we access: channel statistics (subscribers, views, video count), video metadata (titles, thumbnails, privacy status, monetization), analytics data (views, watch time, revenue, CPM, RPM), and monetary reports. We only access data you explicitly authorize."
   },
   {
-    question: "Is my data safe with InTubeMedia?",
+    question: "Is my data safe with Bainsla Music?",
     answer: "We use HTTPS for data in transit, hash local CMS passwords, and encrypt OAuth access and refresh tokens at rest with authenticated server-side encryption. We do not sell YouTube user data or use it for advertising. Limited disclosures to authorized personnel, infrastructure providers, and Google APIs are described in our Privacy Policy."
   },
   {
     question: "How do I connect my YouTube channel?",
-    answer: "After adding an assigned channel, open its authorization link. Review the data-use disclosure, confirm you own or manage the exact channel, accept the Privacy Policy and Terms, and continue to Google. Google hosts sign-in and consent. InTubeMedia stores authorization only after the returned channel ID exactly matches the assigned channel."
+    answer: "After adding an assigned channel, open its authorization link. Review the data-use disclosure, confirm you own or manage the exact channel, accept the Privacy Policy and Terms, and continue to Google. Google hosts sign-in and consent. Bainsla Music stores authorization only after the returned channel ID exactly matches the assigned channel."
   },
   {
     question: "Why is my channel token showing as 'Expired' or 'Not Validated'?",
-    answer: "Google authorization can expire or be revoked. Use 'Validate Token' for the affected channel, review the disclosure, and authorize again through Google. If Google reports an invalid grant, InTubeMedia deletes the unusable token and related authorized cache data before showing the channel as not validated."
+    answer: "Google authorization can expire or be revoked. Use 'Validate Token' for the affected channel, review the disclosure, and authorize again through Google. If Google reports an invalid grant, Bainsla Music deletes the unusable token and related authorized cache data before showing the channel as not validated."
   },
   {
     question: "How accurate is the revenue data?",
@@ -40,7 +40,7 @@ const faqs = [
   },
   {
     question: "Can I manage multiple YouTube channels?",
-    answer: "Yes! InTubeMedia is built for multi-channel management. You can connect and manage unlimited YouTube channels from a single account. Each channel's data is tracked independently with consolidated dashboards."
+    answer: "Yes! Bainsla Music is built for multi-channel management. You can connect and manage unlimited YouTube channels from a single account. Each channel's data is tracked independently with consolidated dashboards."
   },
   {
     question: "What is Music Distribution?",
@@ -48,19 +48,19 @@ const faqs = [
   },
   {
     question: "How do payments work?",
-    answer: "InTubeMedia tracks your YouTube revenue and provides payment management features. You can view per-channel payment breakdowns, request withdrawals, and track payment history. TDS calculations are supported for Indian creators."
+    answer: "Bainsla Music tracks your YouTube revenue and provides payment management features. You can view per-channel payment breakdowns, request withdrawals, and track payment history. TDS calculations are supported for Indian creators."
   },
   {
     question: "What are copyright claims and how do I manage them?",
-    answer: "Copyright claims are made when Content ID detects your content in other videos or vice versa. InTubeMedia helps you monitor these claims, submit release requests, and track their resolution status."
+    answer: "Copyright claims are made when Content ID detects your content in other videos or vice versa. Bainsla Music helps you monitor these claims, submit release requests, and track their resolution status."
   },
   {
-    question: "How do I revoke InTubeMedia's access to my YouTube data?",
-    answer: "You can revoke access anytime by visiting myaccount.google.com/permissions, finding InTubeMedia in the list of connected apps, and clicking 'Remove Access'. This will immediately stop our access to your YouTube data."
+    question: "How do I revoke Bainsla Music's access to my YouTube data?",
+    answer: "You can revoke access anytime by visiting myaccount.google.com/permissions, finding Bainsla Music in the list of connected apps, and clicking 'Remove Access'. This will immediately stop our access to your YouTube data."
   },
   {
     question: "I'm having trouble logging in. What should I do?",
-    answer: "Try these steps: 1) Clear your browser cache and cookies, 2) Try an incognito/private window, 3) Make sure you are using the correct InTubeMedia email and CMS password, 4) Use the password-reset option if needed. Never enter your Google or YouTube password on an InTubeMedia page. If problems persist, contact shivlalbainslaofficial@gmail.com."
+    answer: "Try these steps: 1) Clear your browser cache and cookies, 2) Try an incognito/private window, 3) Make sure you are using the correct Bainsla Music email and CMS password, 4) Use the password-reset option if needed. Never enter your Google or YouTube password on an Bainsla Music page. If problems persist, contact shivlalbainslaofficial@gmail.com."
   },
   {
     question: "How do I contact support?",
@@ -78,7 +78,7 @@ export default function FAQPage() {
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-slate-900 mb-4">Frequently Asked Questions</h2>
           <p className="text-lg text-slate-600">
-            Find answers to common questions about InTubeMedia and our services.
+            Find answers to common questions about Bainsla Music and our services.
           </p>
         </div>
 

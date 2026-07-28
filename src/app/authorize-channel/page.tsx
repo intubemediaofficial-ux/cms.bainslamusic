@@ -125,7 +125,7 @@ function AuthorizationContent() {
               </section>
 
               <section>
-                <h1 className="text-xl font-bold">What InTubeMedia requests</h1>
+                <h1 className="text-xl font-bold">What Bainsla Music requests</h1>
                 <div className="mt-4 space-y-3">
                   {details.scopes.map((scope, index) => {
                     const Icon = scopeIcons[index] || ShieldCheck;
@@ -151,7 +151,7 @@ function AuthorizationContent() {
                     <p className="font-semibold">Your Google password stays with Google</p>
                     <p>
                       Google sign-in and consent happen only on <strong>accounts.google.com</strong>.
-                      InTubeMedia never asks for, receives, or stores your Google or YouTube password.
+                      Bainsla Music never asks for, receives, or stores your Google or YouTube password.
                       We receive OAuth authorization tokens after you approve access.
                     </p>
                   </div>

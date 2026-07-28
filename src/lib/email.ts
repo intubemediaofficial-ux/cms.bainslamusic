@@ -16,7 +16,7 @@ async function sendViaResend(params: SendEmailParams): Promise<{ success: boolea
   const fromEmail = process.env.OTP_FROM_EMAIL || "onboarding@resend.dev";
 
   const result = await resend.emails.send({
-    from: `InTubeMedia <${fromEmail}>`,
+    from: `Bainsla Music <${fromEmail}>`,
     to: params.to,
     subject: params.subject,
     html: params.html,
@@ -48,7 +48,7 @@ async function sendViaSMTP(params: SendEmailParams): Promise<{ success: boolean;
 
   try {
     await transporter.sendMail({
-      from: `InTubeMedia <${fromEmail}>`,
+      from: `Bainsla Music <${fromEmail}>`,
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -86,7 +86,7 @@ export function getWelcomeEmailHtml(params: {
     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
       <div style="text-align: center; margin-bottom: 24px;">
         <div style="display: inline-block; background: #dc2626; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px;">
-          <span style="color: #fff; font-size: 18px; font-weight: bold;">InTubeMedia</span>
+          <span style="color: #fff; font-size: 18px; font-weight: bold;">Bainsla Music</span>
         </div>
         <p style="color: #666; font-size: 14px; margin: 4px 0 0;">Channel Management System</p>
       </div>
@@ -94,7 +94,7 @@ export function getWelcomeEmailHtml(params: {
       <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin-bottom: 20px;">
         <h2 style="color: #1a1a1a; margin: 0 0 8px; font-size: 20px;">Welcome, ${params.name}!</h2>
         <p style="color: #666; font-size: 14px; margin: 0 0 16px;">
-          Your <strong>${roleLabel}</strong> account has been created on InTubeMedia CMS.
+          Your <strong>${roleLabel}</strong> account has been created on Bainsla Music CMS.
         </p>
         ${createdByLine}
 
@@ -128,7 +128,7 @@ export function getWelcomeEmailHtml(params: {
         For security, we recommend changing your password after first login.
       </p>
       <p style="color: #ccc; font-size: 11px; text-align: center; margin-top: 20px;">
-        &copy; ${new Date().getFullYear()} InTubeMedia. All rights reserved.
+        &copy; ${new Date().getFullYear()} Bainsla Music. All rights reserved.
       </p>
     </div>
   `;

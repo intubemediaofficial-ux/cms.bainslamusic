@@ -22,8 +22,8 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="text-xl font-bold text-slate-900 mb-3">1. Scope and operator</h2>
               <p>
-                This Privacy Policy explains how InTubeMedia processes information through the
-                InTubeMedia channel management service at cms.intubemedia.com. It covers local CMS
+                This Privacy Policy explains how Bainsla Music processes information through the
+                Bainsla Music channel management service at cms.bainslamusic.com. It covers local CMS
                 accounts, Google Sign-In for CMS authentication, and separately authorized YouTube
                 channel access. Privacy questions, complaints, and deletion requests can be sent to{" "}
                 <a className={externalLinkClass} href="mailto:shivlalbainslaofficial@gmail.com">
@@ -48,7 +48,7 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="text-xl font-bold text-slate-900 mb-3">3. Google and YouTube APIs and scopes</h2>
               <p className="mb-3">
-                InTubeMedia uses Google-hosted OAuth 2.0, the YouTube Data API, and the YouTube
+                Bainsla Music uses Google-hosted OAuth 2.0, the YouTube Data API, and the YouTube
                 Analytics API. A channel owner or authorized manager must review the disclosure for
                 the exact assigned channel and approve these scopes on Google&apos;s consent page:
               </p>
@@ -58,7 +58,7 @@ export default function PrivacyPolicyPage() {
                 <li><code>yt-analytics-monetary.readonly</code>: read estimated revenue and monetary analytics for revenue dashboards, monthly reports, and authorized exports.</li>
               </ul>
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
-                <strong>InTubeMedia never asks for, receives, or stores your Google or YouTube password.</strong>{" "}
+                <strong>Bainsla Music never asks for, receives, or stores your Google or YouTube password.</strong>{" "}
                 Google sign-in and YouTube permission approval occur only on Google-controlled domains.
                 Google returns authorization tokens to our server after approval; it does not provide us
                 with your Google password.
@@ -71,8 +71,8 @@ export default function PrivacyPolicyPage() {
                 <li>An authenticated CMS user generates a random, one-time link bound to an exact assigned channel. The link expires after 15 minutes.</li>
                 <li>The channel owner or authorized manager reviews the requested data and purposes, confirms channel authority, and accepts this Policy and the Terms.</li>
                 <li>The user continues to Google, where Google authenticates the user and displays the requested permissions.</li>
-                <li>Google returns an authorization code. InTubeMedia exchanges it on the server; access and refresh tokens are not returned to browser JavaScript.</li>
-                <li>InTubeMedia calls <code>channels.list(mine=true)</code> and stores authorization only if Google returns the exact channel ID assigned in the CMS. Rejected or mismatched authorization is revoked and not stored.</li>
+                <li>Google returns an authorization code. Bainsla Music exchanges it on the server; access and refresh tokens are not returned to browser JavaScript.</li>
+                <li>Bainsla Music calls <code>channels.list(mine=true)</code> and stores authorization only if Google returns the exact channel ID assigned in the CMS. Rejected or mismatched authorization is revoked and not stored.</li>
               </ol>
             </section>
 
@@ -88,7 +88,7 @@ export default function PrivacyPolicyPage() {
               </ul>
               <p className="mt-3">
                 Google API data is used only to provide or improve user-facing features that are
-                prominent in InTubeMedia. Our use and transfer of information received from Google APIs
+                prominent in Bainsla Music. Our use and transfer of information received from Google APIs
                 adheres to the{" "}
                 <a className={externalLinkClass} href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">
                   Google API Services User Data Policy
@@ -118,7 +118,7 @@ export default function PrivacyPolicyPage() {
               <ul className="list-disc pl-6 mt-3 space-y-2">
                 <li>the account&apos;s authorized client, company, administrator, or agent according to configured roles and channel assignments;</li>
                 <li>Google APIs, as necessary to perform the user-authorized request;</li>
-                <li>hosting, database/Redis, email, security, and infrastructure providers acting for InTubeMedia under appropriate confidentiality and security obligations;</li>
+                <li>hosting, database/Redis, email, security, and infrastructure providers acting for Bainsla Music under appropriate confidentiality and security obligations;</li>
                 <li>authorities or other parties when required by law, necessary to protect rights and safety, or involved in a properly structured business transfer subject to applicable safeguards.</li>
               </ul>
             </section>
@@ -128,8 +128,8 @@ export default function PrivacyPolicyPage() {
               <ul className="list-disc pl-6 space-y-2">
                 <li>OAuth tokens are retained only while the channel remains authorized and connected. Access tokens are refreshed and authorization is revalidated through scheduled sync and API use.</li>
                 <li>Current, backup, snapshot, video, statistics, dashboard, date-range, monthly analytics, and monthly revenue-export caches may be retained to provide consistent historical dashboards and exports while authorization remains valid. Stored API statistics are refreshed or revalidated at least every 30 days.</li>
-                <li>When a user chooses <strong>Revoke Access</strong> or delinks/removes a channel in the CMS, InTubeMedia requests immediate revocation at Google and deletes the local token and authorized channel caches as part of that operation. The interface does not report success if this cleanup fails.</li>
-                <li>If Google authorization is revoked externally, InTubeMedia detects invalid authorization during scheduled token refresh or API revalidation, then deletes the unusable token and related authorized data. This detection and cleanup is designed to occur within 30 calendar days.</li>
+                <li>When a user chooses <strong>Revoke Access</strong> or delinks/removes a channel in the CMS, Bainsla Music requests immediate revocation at Google and deletes the local token and authorized channel caches as part of that operation. The interface does not report success if this cleanup fails.</li>
+                <li>If Google authorization is revoked externally, Bainsla Music detects invalid authorization during scheduled token refresh or API revalidation, then deletes the unusable token and related authorized data. This detection and cleanup is designed to occur within 30 calendar days.</li>
                 <li>After a verified account/data-deletion request, we delete the account and related authorized Google/YouTube data within seven calendar days unless limited retention is legally required. Separate invoices, payment evidence, fraud/security records, or legal records may be retained only as required and are not used to recreate revoked YouTube API data.</li>
               </ul>
             </section>
@@ -137,8 +137,8 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="text-xl font-bold text-slate-900 mb-3">9. Your controls</h2>
               <ul className="list-disc pl-6 space-y-2">
-                <li>Revoke a channel in InTubeMedia through Channels → Revoke Access / delink / remove.</li>
-                <li>Revoke InTubeMedia externally through{" "}
+                <li>Revoke a channel in Bainsla Music through Channels → Revoke Access / delink / remove.</li>
+                <li>Revoke Bainsla Music externally through{" "}
                   <a className={externalLinkClass} href="https://security.google.com/settings/security/permissions" target="_blank" rel="noopener noreferrer">
                     Google Account permissions
                   </a>.
@@ -152,7 +152,7 @@ export default function PrivacyPolicyPage() {
             <section>
               <h2 className="text-xl font-bold text-slate-900 mb-3">10. Cookies</h2>
               <p>
-                InTubeMedia uses essential authentication and session cookies to sign users in, protect
+                Bainsla Music uses essential authentication and session cookies to sign users in, protect
                 requests, and maintain account security. We do not use YouTube API data for advertising
                 profiles. Browser controls may block cookies, but essential CMS functions may then stop working.
               </p>

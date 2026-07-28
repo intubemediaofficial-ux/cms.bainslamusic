@@ -40,17 +40,17 @@ interface VideoItem {
 }
 
 const mockVideos: VideoItem[] = [
-  { id: "1", title: "Tere Bina - Official Music Video", channel: "InTubeMedia", thumbnail: "", views: "1.2M", likes: "45K", comments: "2.3K", publishDate: "2024-12-15", duration: "4:32", contentId: true, claimStatus: "active", monetized: true, visibility: "public" },
+  { id: "1", title: "Tere Bina - Official Music Video", channel: "Bainsla Music", thumbnail: "", views: "1.2M", likes: "45K", comments: "2.3K", publishDate: "2024-12-15", duration: "4:32", contentId: true, claimStatus: "active", monetized: true, visibility: "public" },
   { id: "2", title: "Sada Punjab - Full Song", channel: "Desi Beats", thumbnail: "", views: "856K", likes: "32K", comments: "1.8K", publishDate: "2024-11-20", duration: "5:15", contentId: true, claimStatus: "potential", monetized: true, visibility: "public" },
-  { id: "3", title: "Nachdi Jawani - Lyrical", channel: "InTubeMedia", thumbnail: "", views: "2.1M", likes: "78K", comments: "4.5K", publishDate: "2024-10-05", duration: "3:48", contentId: true, claimStatus: "none", monetized: true, visibility: "public" },
+  { id: "3", title: "Nachdi Jawani - Lyrical", channel: "Bainsla Music", thumbnail: "", views: "2.1M", likes: "78K", comments: "4.5K", publishDate: "2024-10-05", duration: "3:48", contentId: true, claimStatus: "none", monetized: true, visibility: "public" },
   { id: "4", title: "Dil Da Mamla - Audio", channel: "Music Hub", thumbnail: "", views: "345K", likes: "12K", comments: "890", publishDate: "2024-09-18", duration: "4:05", contentId: false, claimStatus: "none", monetized: false, visibility: "unlisted" },
   { id: "5", title: "Punjab Di Shan - Remix", channel: "Desi Beats", thumbnail: "", views: "567K", likes: "21K", comments: "1.1K", publishDate: "2024-08-22", duration: "3:22", contentId: true, claimStatus: "disputed", monetized: true, visibility: "public" },
-  { id: "6", title: "Ishq Tera - Unplugged", channel: "InTubeMedia", thumbnail: "", views: "189K", likes: "8.5K", comments: "456", publishDate: "2024-07-30", duration: "5:48", contentId: true, claimStatus: "active", monetized: true, visibility: "public" },
+  { id: "6", title: "Ishq Tera - Unplugged", channel: "Bainsla Music", thumbnail: "", views: "189K", likes: "8.5K", comments: "456", publishDate: "2024-07-30", duration: "5:48", contentId: true, claimStatus: "active", monetized: true, visibility: "public" },
 ];
 
 const mockLiveStreams: VideoItem[] = [
-  { id: "l1", title: "Live Concert - InTubeMedia Night 2024", channel: "InTubeMedia", thumbnail: "", views: "45K", likes: "3.2K", comments: "890", publishDate: "2024-12-31", duration: "2:30:00", contentId: false, claimStatus: "none", monetized: true, visibility: "public" },
-  { id: "l2", title: "Music Launch Event Live", channel: "InTubeMedia", thumbnail: "", views: "12K", likes: "1.1K", comments: "234", publishDate: "2024-11-15", duration: "1:45:00", contentId: false, claimStatus: "none", monetized: false, visibility: "public" },
+  { id: "l1", title: "Live Concert - Bainsla Music Night 2024", channel: "Bainsla Music", thumbnail: "", views: "45K", likes: "3.2K", comments: "890", publishDate: "2024-12-31", duration: "2:30:00", contentId: false, claimStatus: "none", monetized: true, visibility: "public" },
+  { id: "l2", title: "Music Launch Event Live", channel: "Bainsla Music", thumbnail: "", views: "12K", likes: "1.1K", comments: "234", publishDate: "2024-11-15", duration: "1:45:00", contentId: false, claimStatus: "none", monetized: false, visibility: "public" },
 ];
 
 function getClaimBadge(status: VideoItem["claimStatus"]) {
@@ -180,7 +180,7 @@ export default function CmsVideosPage() {
             <div className="flex flex-wrap gap-3">
               <select className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-[#606060]">
                 <option>All channels</option>
-                <option>InTubeMedia</option>
+                <option>Bainsla Music</option>
                 <option>Desi Beats</option>
                 <option>Music Hub</option>
               </select>

@@ -108,7 +108,7 @@ function CallbackContent() {
               {kvConfigured === false && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
                   <p className="text-sm text-amber-700">
-                    <strong>Warning:</strong> Persistent server storage is unavailable. Please contact InTubeMedia support.
+                    <strong>Warning:</strong> Persistent server storage is unavailable. Please contact Bainsla Music support.
                   </p>
                 </div>
               )}

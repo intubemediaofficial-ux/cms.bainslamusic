@@ -415,10 +415,10 @@ export async function POST(request: Request) {
     }
 
     // Send welcome email (non-blocking — don't fail user creation if email fails)
-    const creatorName = isComp && companyUser ? companyUser.name : "InTubeMedia Admin";
+    const creatorName = isComp && companyUser ? companyUser.name : "Bainsla Music Admin";
     sendEmail({
       to: newUser.email,
-      subject: `Welcome to InTubeMedia — Your ${newRole === "company" ? "Company" : "Client"} Account`,
+      subject: `Welcome to Bainsla Music — Your ${newRole === "company" ? "Company" : "Client"} Account`,
       html: getWelcomeEmailHtml({
         name: newUser.name,
         email: newUser.email,
@@ -450,7 +450,7 @@ export async function POST(request: Request) {
       newUser.id,
       newUser.email,
       "welcome",
-      "Welcome to InTubeMedia!",
+      "Welcome to Bainsla Music!",
       `Your ${newRole} account has been created. Login at ${new URL(getAppUrl()).host} with your email.`
     ).catch(() => {});
 

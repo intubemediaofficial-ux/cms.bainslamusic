@@ -74,7 +74,7 @@ export default function AdminSidebar() {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-sm font-bold tracking-wide">InTubeMedia</span>
+              <span className="text-sm font-bold tracking-wide">Bainsla Music</span>
               <span className="block text-[10px] text-red-400 font-medium">ADMIN PANEL</span>
             </div>
           </Link>

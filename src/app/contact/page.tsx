@@ -45,8 +45,8 @@ export default function ContactPage() {
                 <div>
                   <h4 className="text-lg font-semibold text-slate-900">Website</h4>
                   <p className="text-slate-600 mt-1">Visit our platform</p>
-                  <a href="https://cms.intubemedia.com" className="text-red-600 hover:underline mt-1 inline-block">
-                    cms.intubemedia.com
+                  <a href="https://cms.bainslamusic.com" className="text-red-600 hover:underline mt-1 inline-block">
+                    cms.bainslamusic.com
                   </a>
                 </div>
               </div>
@@ -90,7 +90,7 @@ export default function ContactPage() {
                 const topic = String(formData.get("subject") || "general");
                 const subject = topic === "privacy"
                   ? "Privacy / Account or YouTube Data Deletion Request"
-                  : `InTubeMedia contact: ${topic}`;
+                  : `Bainsla Music contact: ${topic}`;
                 const body = [
                   `Name: ${String(formData.get("name") || "")}`,
                   `Email: ${String(formData.get("email") || "")}`,

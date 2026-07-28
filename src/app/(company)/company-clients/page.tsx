@@ -725,7 +725,7 @@ function CompanyClientsContent() {
 
             <p className="text-xs text-muted">
               After creating the client, share their login credentials. They can log in at{" "}
-              <span className="font-medium">cms.intubemedia.com/login</span> and add their YouTube channels.
+              <span className="font-medium">cms.bainslamusic.com/login</span> and add their YouTube channels.
               All their channel data will automatically appear in your company dashboard.
             </p>
 

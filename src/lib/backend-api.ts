@@ -1,5 +1,5 @@
 /**
- * Backend API client for InTubeMedia CMS
+ * Backend API client for Bainsla Music CMS
  * Connects frontend (Vercel) to backend (DigitalOcean) at api.intubemedia.com
  */
 

@@ -131,7 +131,7 @@ export default function BrandingSettings({ userId, currentBranding, onSave }: Br
             placeholder="e.g. Star Music India"
             className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
-          <p className="text-[10px] text-muted mt-1">Your clients will see this name instead of InTubeMedia.</p>
+          <p className="text-[10px] text-muted mt-1">Your clients will see this name instead of Bainsla Music.</p>
         </div>
 
         <div>

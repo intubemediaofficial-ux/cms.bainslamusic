@@ -73,7 +73,7 @@ export async function buildVendorExcelWorkbook(
   if (values.length === 0) throw new Error("Vendor sheet is empty");
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "InTubeMedia CMS";
+  workbook.creator = "Bainsla Music CMS";
   workbook.created = new Date();
   const worksheet = workbook.addWorksheet(sheetTitle, {
     properties: { defaultRowHeight: 30 },

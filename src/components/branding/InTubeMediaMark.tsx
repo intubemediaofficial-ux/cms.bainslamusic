@@ -11,7 +11,7 @@ export function InTubeMediaMark({
 }: InTubeMediaMarkProps) {
   return (
     <div
-      aria-label="InTubeMedia"
+      aria-label="Bainsla Music"
       className={cn(
         "flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-violet-600 to-cyan-500 shadow-lg shadow-indigo-500/20",
         className
@@ -21,7 +21,7 @@ export function InTubeMediaMark({
         aria-hidden="true"
         className={cn("font-black tracking-[-0.12em] text-white", textClassName)}
       >
-        IM
+        BM
       </span>
     </div>
   );

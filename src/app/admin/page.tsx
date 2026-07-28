@@ -116,9 +116,9 @@ export default function AdminPage() {
   ];
 
   const sectionMeta: Record<string, { title: string; subtitle: string }> = {
-    overview: { title: 'Dashboard', subtitle: "Welcome back, Admin! Here's what's happening with InTubeMedia." },
+    overview: { title: 'Dashboard', subtitle: "Welcome back, Admin! Here's what's happening with Bainsla Music." },
     banners: { title: 'Home Banner', subtitle: 'Manage homepage hero banners for the website.' },
-    artists: { title: 'Artists', subtitle: 'Manage and explore all artists associated with InTubeMedia.' },
+    artists: { title: 'Artists', subtitle: 'Manage and explore all artists associated with Bainsla Music.' },
     releases: { title: 'RELEASES', subtitle: 'Manage and upload your music releases.' },
     videos: { title: 'VIDEOS', subtitle: 'Upload, manage and publish devotional music videos.' },
     catalogue: { title: '🎵 Music Catalogue', subtitle: 'Manage your complete music catalogue.' },
@@ -159,7 +159,7 @@ export default function AdminPage() {
         <div style={{padding:16,borderTop:'1px solid #222',textAlign:'center'}}>
           <div style={{fontSize:40,marginBottom:4}}>🎧</div>
           <div style={{fontSize:12,fontWeight:600,color:'#fff'}}>Welcome Admin</div>
-          <div style={{fontSize:10,color:'#666'}}>InTubeMedia</div>
+          <div style={{fontSize:10,color:'#666'}}>Bainsla Music</div>
         </div>
       </nav>
 
@@ -201,7 +201,7 @@ export default function AdminPage() {
 
         {/* Footer */}
         <footer style={{padding:'16px 24px',borderTop:'1px solid #222',display:'flex',justifyContent:'space-between',fontSize:11,color:'#666'}}>
-          <p>© 2024 InTubeMedia. All Rights Reserved.</p>
+          <p>© 2024 Bainsla Music. All Rights Reserved.</p>
           <p>Made with ❤️ for Devotional Music</p>
         </footer>
       </main>
@@ -312,7 +312,7 @@ function OverviewSection({ data }: { data: Record<string, unknown> }) {
               <thead><tr>{['#','Title','Artist','Status','Platform'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
               <tbody>
                 {releases.slice(0, 5).map((r, i) => (
-                  <tr key={i}><td style={S.td}>{i + 1}</td><td style={{...S.td,fontWeight:600,color:'#fff'}}>{r.hindi_title || r.eng_title || ''}</td><td style={S.td}>{r.artist || 'InTubeMedia'}</td><td style={S.td}><span style={{...S.badge,...S.badgeGreen}}>Published</span></td><td style={S.td}><PlatformIcons /></td></tr>
+                  <tr key={i}><td style={S.td}>{i + 1}</td><td style={{...S.td,fontWeight:600,color:'#fff'}}>{r.hindi_title || r.eng_title || ''}</td><td style={S.td}>{r.artist || 'Bainsla Music'}</td><td style={S.td}><span style={{...S.badge,...S.badgeGreen}}>Published</span></td><td style={S.td}><PlatformIcons /></td></tr>
                 ))}
               </tbody>
             </table>
@@ -445,7 +445,7 @@ function ReleasesSection({ data, saveData, toast }: { data: Record<string, unkno
 
   function addRelease() {
     if (!hindiTitle) return;
-    saveData({ ...data, releases: [...releases, { id: Date.now().toString(), hindi_title: hindiTitle, eng_title: engTitle, artist: artist || 'InTubeMedia', image, label: 'InTubeMedia', status: 'Published' }] });
+    saveData({ ...data, releases: [...releases, { id: Date.now().toString(), hindi_title: hindiTitle, eng_title: engTitle, artist: artist || 'Bainsla Music', image, label: 'Bainsla Music', status: 'Published' }] });
     toast('Release added');
     setHindiTitle(''); setEngTitle(''); setArtist(''); setImage('');
   }
@@ -462,7 +462,7 @@ function ReleasesSection({ data, saveData, toast }: { data: Record<string, unkno
         <div style={S.cardBody}>
           <div style={S.formGroup}><label style={S.label}>Hindi Title</label><input style={S.input} value={hindiTitle} onChange={e => setHindiTitle(e.target.value)} placeholder="हिंदी टाइटल" /></div>
           <div style={S.formGroup}><label style={S.label}>English Title</label><input style={S.input} value={engTitle} onChange={e => setEngTitle(e.target.value)} /></div>
-          <div style={S.formGroup}><label style={S.label}>Artist</label><input style={S.input} value={artist} onChange={e => setArtist(e.target.value)} placeholder="InTubeMedia" /></div>
+          <div style={S.formGroup}><label style={S.label}>Artist</label><input style={S.input} value={artist} onChange={e => setArtist(e.target.value)} placeholder="Bainsla Music" /></div>
           <div style={S.formGroup}><label style={S.label}>Cover Image URL</label><input style={S.input} value={image} onChange={e => setImage(e.target.value)} /></div>
           <button style={{...S.btn,...S.btnPrimary}} onClick={addRelease}>🎵 Publish Release</button>
         </div>
@@ -543,7 +543,7 @@ function CatalogueSection({ data }: { data: Record<string, unknown> }) {
         <table style={S.table}>
           <thead><tr>{['#','Title','Artist','Platforms','Status'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <tbody>{releases.map((r, i) => (
-            <tr key={r.id || i}><td style={S.td}>{i + 1}</td><td style={{...S.td,fontWeight:600,color:'#fff'}}>{r.hindi_title || r.eng_title}</td><td style={S.td}>{r.artist || 'InTubeMedia'}</td><td style={S.td}><PlatformIcons /></td><td style={S.td}><span style={{...S.badge,...S.badgeGreen}}>Published</span></td></tr>
+            <tr key={r.id || i}><td style={S.td}>{i + 1}</td><td style={{...S.td,fontWeight:600,color:'#fff'}}>{r.hindi_title || r.eng_title}</td><td style={S.td}>{r.artist || 'Bainsla Music'}</td><td style={S.td}><PlatformIcons /></td><td style={S.td}><span style={{...S.badge,...S.badgeGreen}}>Published</span></td></tr>
           ))}</tbody>
         </table>
       </div>
@@ -726,7 +726,7 @@ function SettingsSection({ data, saveData, toast }: { data: Record<string, unkno
 function getDefaultData(): Record<string, unknown> {
   return {
     settings: {
-      company_name: 'InTubeMedia',
+      company_name: 'Bainsla Music',
       tagline: "India's Devotional, Folk & Rasiya Music Label",
       phone: '+91 72978 97628',
       email: 'contact@intubemedia.com',
@@ -744,12 +744,12 @@ function getDefaultData(): Record<string, unknown> {
       { id: '1', title: 'INTUBEMEDIA', subtitle: "YouTube Channel Management System", image: '' }
     ],
     releases: [
-      { id: '1', hindi_title: 'श्याम तेरी बंसी पागल कर जाती है', eng_title: 'Shyam Teri Bansi Pagaal Kar Jaati Hai', artist: 'InTubeMedia', label: 'InTubeMedia', image: '', status: 'Published' },
-      { id: '2', hindi_title: 'राधा रानी मेरी है', eng_title: 'Radha Rani Meri Hai', artist: 'InTubeMedia', label: 'InTubeMedia', image: '', status: 'Published' },
-      { id: '3', hindi_title: 'हनुमान चालीसा', eng_title: 'Hanuman Chalisa', artist: 'InTubeMedia', label: 'InTubeMedia', image: '', status: 'Published' },
-      { id: '4', hindi_title: 'राम नाम की महिमा', eng_title: 'Ram Naam Ki Mahima', artist: 'InTubeMedia', label: 'InTubeMedia', image: '', status: 'Published' },
-      { id: '5', hindi_title: 'गुर्जर रसिया', eng_title: 'Gurjar Rasiya', artist: 'InTubeMedia', label: 'InTubeMedia', image: '', status: 'Published' },
-      { id: '6', hindi_title: 'डीजे रसिया 2024', eng_title: 'DJ Rasiya 2024', artist: 'InTubeMedia', label: 'InTubeMedia', image: '', status: 'Published' },
+      { id: '1', hindi_title: 'श्याम तेरी बंसी पागल कर जाती है', eng_title: 'Shyam Teri Bansi Pagaal Kar Jaati Hai', artist: 'Bainsla Music', label: 'Bainsla Music', image: '', status: 'Published' },
+      { id: '2', hindi_title: 'राधा रानी मेरी है', eng_title: 'Radha Rani Meri Hai', artist: 'Bainsla Music', label: 'Bainsla Music', image: '', status: 'Published' },
+      { id: '3', hindi_title: 'हनुमान चालीसा', eng_title: 'Hanuman Chalisa', artist: 'Bainsla Music', label: 'Bainsla Music', image: '', status: 'Published' },
+      { id: '4', hindi_title: 'राम नाम की महिमा', eng_title: 'Ram Naam Ki Mahima', artist: 'Bainsla Music', label: 'Bainsla Music', image: '', status: 'Published' },
+      { id: '5', hindi_title: 'गुर्जर रसिया', eng_title: 'Gurjar Rasiya', artist: 'Bainsla Music', label: 'Bainsla Music', image: '', status: 'Published' },
+      { id: '6', hindi_title: 'डीजे रसिया 2024', eng_title: 'DJ Rasiya 2024', artist: 'Bainsla Music', label: 'Bainsla Music', image: '', status: 'Published' },
     ],
     artists: [
       { id: '1', name: 'Bhumika Sharma', role: 'Singer', genre: 'Devotional, Bhajan', image: '' },

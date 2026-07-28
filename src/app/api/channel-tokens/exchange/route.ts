@@ -213,7 +213,7 @@ export async function POST(request: Request) {
       return Response.json(
         {
           error:
-            "Google did not return offline authorization. No token was stored. Revoke InTubeMedia in Google permissions and retry.",
+            "Google did not return offline authorization. No token was stored. Revoke Bainsla Music in Google permissions and retry.",
         },
         { status: 400 }
       );

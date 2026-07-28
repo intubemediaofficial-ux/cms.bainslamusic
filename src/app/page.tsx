@@ -15,7 +15,7 @@ export default function HomePage() {
               <span className="text-red-600"> All in One Place</span>
             </h2>
             <p className="mt-6 text-lg text-slate-600 leading-relaxed">
-              InTubeMedia is a comprehensive YouTube channel management system (CMS) designed for
+              Bainsla Music is a comprehensive YouTube channel management system (CMS) designed for
               content creators and music labels. Track revenue, manage videos, monitor
               analytics, and handle payments — everything you need to grow your YouTube business.
             </p>
@@ -33,7 +33,7 @@ export default function HomePage() {
         {/* Features Section */}
         <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <h3 className="text-2xl font-bold text-slate-900 text-center mb-12">
-            What InTubeMedia Does For You
+            What Bainsla Music Does For You
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -162,7 +162,7 @@ export default function HomePage() {
           <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8">
             <h3 className="text-2xl font-bold text-slate-900 mb-4">Your Data, Your Control</h3>
             <p className="text-slate-600 mb-4">
-              InTubeMedia uses the YouTube Data API and YouTube Analytics API to provide
+              Bainsla Music uses the YouTube Data API and YouTube Analytics API to provide
               channel management features. We only access data that you explicitly authorize:
             </p>
             <ul className="space-y-2 text-sm text-slate-600">

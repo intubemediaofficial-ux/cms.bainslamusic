@@ -1971,7 +1971,7 @@ export default function ChannelsPage() {
               {inviteOAuthUrl && (
               <div>
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 mb-4 text-xs leading-5 text-blue-900">
-                  This link first opens InTubeMedia&apos;s authorization disclosure. The channel owner must confirm ownership, review all three requested permissions, and accept the Privacy Policy and Terms before continuing to Google. Google sign-in happens only on <strong>accounts.google.com</strong>; InTubeMedia never receives the owner&apos;s Google or YouTube password.
+                  This link first opens Bainsla Music&apos;s authorization disclosure. The channel owner must confirm ownership, review all three requested permissions, and accept the Privacy Policy and Terms before continuing to Google. Google sign-in happens only on <strong>accounts.google.com</strong>; Bainsla Music never receives the owner&apos;s Google or YouTube password.
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-foreground">Authorization review URL:</label>

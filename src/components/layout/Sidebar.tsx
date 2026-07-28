@@ -192,23 +192,23 @@ export default function Sidebar() {
               <h1 className="text-lg font-bold leading-tight text-white">{branding.brandName}</h1>
             ) : isAdmin ? (
               <>
-                <h1 className="text-lg font-bold leading-tight text-white">InTube</h1>
+                <h1 className="text-lg font-bold leading-tight text-white">Bainsla</h1>
                 <p className="text-[10px] font-bold tracking-[0.25em] text-amber-400 uppercase">
-                  Media
+                  Music
                 </p>
               </>
             ) : isCompany ? (
               <>
-                <h1 className="text-lg font-bold leading-tight text-white">InTube</h1>
+                <h1 className="text-lg font-bold leading-tight text-white">Bainsla</h1>
                 <p className="text-[10px] font-bold tracking-[0.25em] text-emerald-400 uppercase">
                   Company
                 </p>
               </>
             ) : (
               <>
-                <h1 className="text-lg font-bold leading-tight bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">InTube</h1>
+                <h1 className="text-lg font-bold leading-tight bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">Bainsla</h1>
                 <p className="text-[10px] font-bold tracking-[0.25em] text-white/60 uppercase">
-                  Media
+                  Music
                 </p>
               </>
             )}

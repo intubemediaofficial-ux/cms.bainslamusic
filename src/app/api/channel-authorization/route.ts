@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   const oauthState = await kv.get<ChannelOAuthState>(stateKey);
   if (!oauthState?.channelId) {
     return noStoreJson(
-      { error: "This authorization link has expired. Request a new link from InTubeMedia." },
+      { error: "This authorization link has expired. Request a new link from Bainsla Music." },
       { status: 410 }
     );
   }
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   const ttl = await kv.ttl(stateKey);
   if (!oauthState?.channelId || ttl <= 0) {
     return noStoreJson(
-      { error: "This authorization link has expired. Request a new link from InTubeMedia." },
+      { error: "This authorization link has expired. Request a new link from Bainsla Music." },
       { status: 410 }
     );
   }

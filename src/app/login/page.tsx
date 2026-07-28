@@ -281,9 +281,9 @@ export default function LoginPage() {
             <InTubeMediaMark className="w-28 h-28 rounded-3xl" textClassName="text-4xl" />
           </div>
 
-          {/* InTubeMedia Text */}
+          {/* Bainsla Music Text */}
           <h1 className="text-5xl font-black text-white mb-2 tracking-tight">
-            <span className="bg-gradient-to-r from-red-400 via-red-500 to-pink-500 bg-clip-text text-transparent">InTubeMedia</span>
+            <span className="bg-gradient-to-r from-red-400 via-red-500 to-pink-500 bg-clip-text text-transparent">Bainsla Music</span>
           </h1>
           <h2 className="text-3xl font-bold text-white/90 tracking-[0.2em] uppercase mb-6">
             CMS
@@ -320,7 +320,7 @@ export default function LoginPage() {
               <InTubeMediaMark className="w-12 h-12" textClassName="text-sm" />
               <div className="text-left">
                 <h1 className="text-2xl font-black text-white">
-                  <span className="bg-gradient-to-r from-red-400 to-pink-500 bg-clip-text text-transparent">InTubeMedia</span>
+                  <span className="bg-gradient-to-r from-red-400 to-pink-500 bg-clip-text text-transparent">Bainsla Music</span>
                 </h1>
                 <p className="text-[10px] font-bold tracking-[0.3em] text-white/60 uppercase">CMS</p>
               </div>
@@ -649,7 +649,7 @@ export default function LoginPage() {
               </p>
             )}
             <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-3 text-xs leading-5 text-white/50">
-              Never enter your Google or YouTube password into an InTubeMedia email/password field. YouTube channel authorization is a separate Google-hosted consent flow.
+              Never enter your Google or YouTube password into an Bainsla Music email/password field. YouTube channel authorization is a separate Google-hosted consent flow.
             </div>
             <div className="mt-5 flex justify-center rounded-lg bg-white px-3 py-2">
               <YouTubeAttribution />

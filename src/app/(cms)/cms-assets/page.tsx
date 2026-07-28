@@ -38,13 +38,13 @@ interface Asset {
 }
 
 const mockAssets: Asset[] = [
-  { id: "A001", title: "Tere Bina", type: "sound_recording", artist: "Bainsla", isrc: "INS1234567890", upc: "1234567890123", album: "Dil Se", label: "InTubeMedia", activeClaims: 12, ownership: "100%", territories: "Worldwide", status: "active", createdDate: "2024-01-15" },
-  { id: "A002", title: "Tere Bina - Official MV", type: "music_video", artist: "Bainsla", isrc: "INS1234567891", upc: "1234567890124", album: "Dil Se", label: "InTubeMedia", activeClaims: 8, ownership: "100%", territories: "Worldwide", status: "active", createdDate: "2024-01-20" },
+  { id: "A001", title: "Tere Bina", type: "sound_recording", artist: "Bainsla", isrc: "INS1234567890", upc: "1234567890123", album: "Dil Se", label: "Bainsla Music", activeClaims: 12, ownership: "100%", territories: "Worldwide", status: "active", createdDate: "2024-01-15" },
+  { id: "A002", title: "Tere Bina - Official MV", type: "music_video", artist: "Bainsla", isrc: "INS1234567891", upc: "1234567890124", album: "Dil Se", label: "Bainsla Music", activeClaims: 8, ownership: "100%", territories: "Worldwide", status: "active", createdDate: "2024-01-20" },
   { id: "A003", title: "Sada Punjab", type: "sound_recording", artist: "Ranjit Singh", isrc: "INS2234567890", upc: "2234567890123", album: "Punjab Forever", label: "Desi Beats", activeClaims: 5, ownership: "75%", territories: "IN, US, CA, UK", status: "active", createdDate: "2024-02-10" },
-  { id: "A004", title: "Nachdi Jawani", type: "composition", artist: "Various", isrc: "", upc: "", album: "", label: "InTubeMedia", activeClaims: 3, ownership: "50%", territories: "IN", status: "active", createdDate: "2024-03-05" },
+  { id: "A004", title: "Nachdi Jawani", type: "composition", artist: "Various", isrc: "", upc: "", album: "", label: "Bainsla Music", activeClaims: 3, ownership: "50%", territories: "IN", status: "active", createdDate: "2024-03-05" },
   { id: "A005", title: "Dil Da Mamla", type: "sound_recording", artist: "Bainsla", isrc: "INS3234567890", upc: "3234567890123", album: "Love Stories", label: "Music Hub", activeClaims: 0, ownership: "100%", territories: "Worldwide", status: "inactive", createdDate: "2024-04-12" },
   { id: "A006", title: "Punjab Di Shan - Remix", type: "sound_recording", artist: "DJ Remix", isrc: "INS4234567890", upc: "4234567890123", album: "Remix Collection", label: "Desi Beats", activeClaims: 2, ownership: "60%", territories: "IN, CA", status: "active", createdDate: "2024-05-20" },
-  { id: "A007", title: "Ishq Tera", type: "music_video", artist: "Bainsla", isrc: "INS5234567890", upc: "5234567890123", album: "Love Stories", label: "InTubeMedia", activeClaims: 15, ownership: "100%", territories: "Worldwide", status: "active", createdDate: "2024-06-01" },
+  { id: "A007", title: "Ishq Tera", type: "music_video", artist: "Bainsla", isrc: "INS5234567890", upc: "5234567890123", album: "Love Stories", label: "Bainsla Music", activeClaims: 15, ownership: "100%", territories: "Worldwide", status: "active", createdDate: "2024-06-01" },
 ];
 
 function getTypeIcon(type: AssetType) {
@@ -178,7 +178,7 @@ export default function CmsAssetsPage() {
               </select>
               <select className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-[#606060]">
                 <option>Label</option>
-                <option>InTubeMedia</option>
+                <option>Bainsla Music</option>
                 <option>Desi Beats</option>
                 <option>Music Hub</option>
               </select>

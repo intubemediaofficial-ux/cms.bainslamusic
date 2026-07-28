@@ -8,7 +8,7 @@ export default function AboutPage() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Page Title */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">About InTubeMedia</h2>
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">About Bainsla Music</h2>
           <p className="text-lg text-slate-600">
             Empowering content creators and music labels with powerful YouTube channel management tools.
           </p>
@@ -19,7 +19,7 @@ export default function AboutPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
             <h3 className="text-2xl font-bold text-slate-900 mb-4">Who We Are</h3>
             <p className="text-slate-600 leading-relaxed mb-4">
-              InTubeMedia is a technology company specializing in YouTube channel management solutions.
+              Bainsla Music is a technology company specializing in YouTube channel management solutions.
               We provide a comprehensive Content Management System (CMS) designed specifically for
               content creators, music labels, and multi-channel networks (MCNs) who need powerful
               tools to manage their YouTube presence efficiently.
@@ -27,7 +27,7 @@ export default function AboutPage() {
             <p className="text-slate-600 leading-relaxed">
               Our platform helps creators track revenue, manage videos, monitor analytics,
               handle payments, and distribute music — all from a single, intuitive dashboard.
-              Whether you manage one channel or hundreds, InTubeMedia scales with your needs.
+              Whether you manage one channel or hundreds, Bainsla Music scales with your needs.
             </p>
           </div>
         </section>
@@ -73,7 +73,7 @@ export default function AboutPage() {
                 </svg>
               </div>
               <h4 className="text-lg font-semibold text-slate-900 mb-2">Music Distribution</h4>
-              <p className="text-sm text-slate-600">Distribute your music to major streaming platforms like Spotify, Apple Music, Amazon Music, and more — all from within the InTubeMedia platform.</p>
+              <p className="text-sm text-slate-600">Distribute your music to major streaming platforms like Spotify, Apple Music, Amazon Music, and more — all from within the Bainsla Music platform.</p>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-6">
               <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mb-3">
@@ -89,7 +89,7 @@ export default function AboutPage() {
 
         {/* Why Choose Us */}
         <section className="mb-16">
-          <h3 className="text-2xl font-bold text-slate-900 mb-8 text-center">Why Choose InTubeMedia</h3>
+          <h3 className="text-2xl font-bold text-slate-900 mb-8 text-center">Why Choose Bainsla Music</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center p-6">
               <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
