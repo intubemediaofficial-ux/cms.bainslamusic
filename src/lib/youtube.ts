@@ -62,16 +62,25 @@ export async function getChannelVideosPublic(channelId: string, maxResults = 0) 
   }
   if (allVideoIds.length === 0) return [];
 
+  // Fetch video details in batches of 50, parallelized with limited concurrency.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allItems: any[] = [];
+  const batches: string[][] = [];
   for (let i = 0; i < allVideoIds.length; i += 50) {
-    const batch = allVideoIds.slice(i, i + 50);
-    const videoResponse = await youtube.videos.list({
-      part: ["snippet", "statistics", "contentDetails", "status"],
-      id: batch,
-    });
-    if (videoResponse.data.items) {
-      allItems.push(...videoResponse.data.items);
+    batches.push(allVideoIds.slice(i, i + 50));
+  }
+  const CONCURRENCY = 8;
+  for (let i = 0; i < batches.length; i += CONCURRENCY) {
+    const responses = await Promise.all(
+      batches.slice(i, i + CONCURRENCY).map((batch) =>
+        youtube.videos.list({
+          part: ["snippet", "statistics", "contentDetails", "status"],
+          id: batch,
+        })
+      )
+    );
+    for (const videoResponse of responses) {
+      if (videoResponse.data.items) allItems.push(...videoResponse.data.items);
     }
   }
   return allItems;
@@ -233,17 +242,25 @@ export async function getChannelVideos(
 
   if (allVideoIds.length === 0) return [];
 
-  // Fetch full video details in batches of 50
+  // Fetch full video details in batches of 50, parallelized with limited concurrency.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allItems: any[] = [];
+  const batches: string[][] = [];
   for (let i = 0; i < allVideoIds.length; i += 50) {
-    const batch = allVideoIds.slice(i, i + 50);
-    const videoResponse = await youtube.videos.list({
-      part: ["snippet", "statistics", "contentDetails", "status"],
-      id: batch,
-    });
-    if (videoResponse.data.items) {
-      allItems.push(...videoResponse.data.items);
+    batches.push(allVideoIds.slice(i, i + 50));
+  }
+  const CONCURRENCY = 8;
+  for (let i = 0; i < batches.length; i += CONCURRENCY) {
+    const responses = await Promise.all(
+      batches.slice(i, i + CONCURRENCY).map((batch) =>
+        youtube.videos.list({
+          part: ["snippet", "statistics", "contentDetails", "status"],
+          id: batch,
+        })
+      )
+    );
+    for (const videoResponse of responses) {
+      if (videoResponse.data.items) allItems.push(...videoResponse.data.items);
     }
   }
 
