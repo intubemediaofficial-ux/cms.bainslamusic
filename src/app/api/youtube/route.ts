@@ -69,6 +69,36 @@ function hasChannelAccess(channelIds: string[], allowedChannelIds: Set<string>):
   return channelIds.every((channelId) => allowedChannelIds.has(channelId));
 }
 
+// Fetch fresh videos from YouTube (per-channel token first, then public API key)
+// and write them to the Redis cache. Returns the videos, or null on failure.
+async function fetchAndCacheChannelVideos(
+  channelId: string,
+  maxResults: number
+): Promise<unknown[] | null> {
+  const token = await getValidAccessToken(channelId);
+  if (token) {
+    try {
+      const videos = await getChannelVideos(token, channelId, maxResults);
+      if (videos.length) {
+        await cacheChannelVideos(channelId, videos);
+        return videos;
+      }
+    } catch (err) {
+      console.warn("[videos] token-based refresh failed (quota?):", err instanceof Error ? err.message : err);
+    }
+  }
+  try {
+    const publicVideos = await getChannelVideosPublic(channelId, maxResults);
+    if (publicVideos.length) {
+      await cacheChannelVideos(channelId, publicVideos);
+      return publicVideos;
+    }
+  } catch (err) {
+    console.warn("[videos] public refresh failed (quota?):", err instanceof Error ? err.message : err);
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
 
@@ -148,36 +178,38 @@ export async function GET(request: Request) {
         // 0 = fetch ALL videos (no limit)
         const maxResultsParam = url.searchParams.get("maxResults");
         const maxResults = maxResultsParam ? Number(maxResultsParam) : 0;
-        // Use per-channel token for video data
-        let videoToken: string | undefined = undefined;
-        const channelSpecificToken = await getValidAccessToken(channelId);
-        if (channelSpecificToken) videoToken = channelSpecificToken;
-        if (videoToken) {
-          try {
-            const videos = await getChannelVideos(videoToken, channelId, maxResults);
-            // Cache on success
-            cacheChannelVideos(channelId, videos).catch(() => {});
-            return Response.json({ data: videos });
-          } catch (vidErr) {
-            console.warn("[videos] Token-based fetch failed (quota?):", vidErr instanceof Error ? vidErr.message : vidErr);
-            // Fall through to public API
-          }
-        }
-        // Fallback: use API key for public video data
-        try {
-          const publicVideos = await getChannelVideosPublic(channelId, maxResults);
-          if (publicVideos.length > 0) {
-            // Cache on success
-            cacheChannelVideos(channelId, publicVideos).catch(() => {});
-            return Response.json({ data: publicVideos });
-          }
-        } catch (pubErr) {
-          console.warn("[videos] Public API fetch failed (quota?):", pubErr instanceof Error ? pubErr.message : pubErr);
-        }
-        // Final fallback: KV cache
+        const forceRefresh = url.searchParams.get("refresh") === "1";
+
+        // Cache-first (stale-while-revalidate): serve instantly from Redis and
+        // refresh in the background so pages open in milliseconds instead of
+        // waiting on a full live fetch from YouTube on every load.
         const cachedVids = await getCachedChannelVideos(channelId);
+        const VIDEO_CACHE_STALE_MS = 30 * 60 * 1000; // 30 minutes
+        const cacheAgeMs = cachedVids?.lastUpdated
+          ? Date.now() - new Date(cachedVids.lastUpdated).getTime()
+          : Number.POSITIVE_INFINITY;
+        const isFresh = cacheAgeMs < VIDEO_CACHE_STALE_MS;
+
+        if (cachedVids?.videos?.length && !forceRefresh) {
+          if (!isFresh) {
+            // Fire-and-forget background refresh (long-running PM2 process keeps it alive).
+            void fetchAndCacheChannelVideos(channelId, maxResults);
+          }
+          return Response.json({
+            data: cachedVids.videos,
+            _cached: true,
+            _stale: !isFresh,
+            _lastUpdated: cachedVids.lastUpdated,
+          });
+        }
+
+        // No usable cache (or a forced refresh): fetch live, cache, and return.
+        const freshVideos = await fetchAndCacheChannelVideos(channelId, maxResults);
+        if (freshVideos?.length) {
+          return Response.json({ data: freshVideos });
+        }
+        // Live fetch failed but we still have (stale) cache — serve it rather than error.
         if (cachedVids?.videos?.length) {
-          console.log(`[videos] Serving ${cachedVids.videos.length} cached videos for ${channelId} (last updated: ${cachedVids.lastUpdated})`);
           return Response.json({ data: cachedVids.videos, _cached: true, _lastUpdated: cachedVids.lastUpdated });
         }
         return Response.json({ error: "No token available for this channel. Please validate the channel token first." }, { status: 401 });
