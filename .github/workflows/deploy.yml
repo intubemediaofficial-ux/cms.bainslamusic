@@ -26,7 +26,7 @@ jobs:
           envs: VENDOR_GOOGLE_SHEET_ID,GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL,GOOGLE_SHEETS_PRIVATE_KEY
           script: |
             set -euo pipefail
-            cd /var/www/cms-frontend
+            cd /var/www/cms-bainslamusic
             git pull --ff-only origin main
             npm ci
             npm run build
@@ -55,7 +55,8 @@ jobs:
             if ! grep -q '^CRON_SECRET=' .env.local; then
               printf '\nCRON_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env.local
             fi
-            pm2 restart cms-frontend --update-env
+            pm2 restart cms-bainslamusic --update-env
             pm2 save
-            chmod +x scripts/run-cms-data-sync.sh scripts/install-cms-data-sync-cron.sh
-            scripts/install-cms-data-sync-cron.sh
+            chmod +x scripts/run-cms-data-sync.sh scripts/install-cms-data-sync-cron.sh \
+              scripts/run-copyright-scan.sh scripts/install-copyright-scan-cron.sh
+            CMS_APP_DIR=/var/www/cms-bainslamusic scripts/install-copyright-scan-cron.sh
