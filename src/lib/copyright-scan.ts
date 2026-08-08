@@ -30,6 +30,21 @@ const WATCHLIST_LOOKBACK_DAYS = 21;
 /** A run is considered dead after this long so a crash can't block the cron. */
 const STALE_LOCK_MS = 60 * 60 * 1000;
 
+/**
+ * Google meters `search.list` twice: against the project's unit budget and
+ * against a separate "Search queries per day" limit that is usually much
+ * smaller. Once that limit answers 429 every further search is wasted, so the
+ * sweep stops and the songs it never reached keep their old `lastScannedAt`.
+ */
+function isSearchQuotaError(error: unknown): boolean {
+  const status = (error as { code?: number; status?: number })?.code ?? (error as { status?: number })?.status;
+  if (status === 429 || status === 403) {
+    const message = error instanceof Error ? error.message : String(error);
+    return /quota|rate limit|too many requests/i.test(message) || status === 429;
+  }
+  return false;
+}
+
 export type ScanTrigger = "cron" | "manual";
 
 export interface ScanSummary {
@@ -287,6 +302,7 @@ export async function runCopyrightScan(
   let unitsUsed = 0;
   let songsScanned = 0;
   let watchlistChannelsChecked = 0;
+  let searchQuotaHit = false;
   const newMatches: CopyrightMatch[] = [];
 
   try {
@@ -305,11 +321,13 @@ export async function runCopyrightScan(
     const songById = new Map(activeSongs.map((song) => [song.id, song]));
 
     for (const song of queue) {
+      if (searchQuotaHit) break;
       if (songsScanned >= share) break;
       const queries = buildQueries(song, config.variantsPerSong);
       if (queries.length === 0) continue;
       if (unitsRemaining < queries.length * UNITS_SEARCH) break;
 
+      let searched = false;
       for (const query of queries) {
         try {
           const response = await youtube.search.list({
@@ -323,6 +341,7 @@ export async function runCopyrightScan(
           });
           unitsUsed += UNITS_SEARCH;
           unitsRemaining -= UNITS_SEARCH;
+          searched = true;
 
           for (const item of response.data.items || []) {
             const videoId = item.id?.videoId;
@@ -333,9 +352,17 @@ export async function runCopyrightScan(
             candidates.push({ videoId, songId: song.id, matchedOn: `search: ${query}` });
           }
         } catch (error) {
+          if (isSearchQuotaError(error)) {
+            searchQuotaHit = true;
+            break;
+          }
           console.warn(`[copyright-scan] search failed for "${query}":`, error);
         }
       }
+
+      // Only a song we actually searched counts as scanned; otherwise the next
+      // run would skip it and the catalogue would never be covered.
+      if (!searched) continue;
 
       const index = songs.findIndex((s) => s.id === song.id);
       if (index >= 0) {
@@ -429,7 +456,9 @@ export async function runCopyrightScan(
 
     await saveSongs(songs);
     const unitsUsedTodayTotal = await addUnitsUsed(unitsUsed);
-    const note = `${songsScanned} songs scanned, ${watchlistChannelsChecked} watchlist channels checked`;
+    const note =
+      `${songsScanned} songs scanned, ${watchlistChannelsChecked} watchlist channels checked` +
+      (searchQuotaHit ? " — daily YouTube search-query limit reached, rest continues tomorrow" : "");
 
     await saveScanState({
       running: false,
