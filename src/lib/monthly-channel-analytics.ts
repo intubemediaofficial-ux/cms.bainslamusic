@@ -116,7 +116,7 @@ function extractRevenueViews(
   return { revenue, views };
 }
 
-async function getAssignedChannelIds(): Promise<string[]> {
+export async function getAssignedChannelIds(): Promise<string[]> {
   const users = (await kv.get<StoredUser[]>(USERS_KEY)) || [];
   return Array.from(
     new Set(

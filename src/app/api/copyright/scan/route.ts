@@ -9,7 +9,7 @@ import {
   getUnitsUsedToday,
   saveScanConfig,
 } from "@/lib/copyright-catalog";
-import { runCopyrightScan, shouldRunToday } from "@/lib/copyright-scan";
+import { runCopyrightScan, scanSingleSong, shouldRunToday } from "@/lib/copyright-scan";
 import { isCopyrightAdmin, isCronRequest } from "@/lib/copyright-access";
 
 export const dynamic = "force-dynamic";
@@ -71,11 +71,29 @@ export async function GET(request: Request) {
   });
 }
 
-/** Run a scan now (cron or admin "Scan now" button). */
+/**
+ * Run a scan now: the whole slice (cron / "Scan now"), or a single song when
+ * the body carries `mode: "single"` with a title (plus optional ISRC/UPC).
+ */
 export async function POST(request: Request) {
   const cron = isCronRequest(request);
   if (!cron && !(await isCopyrightAdmin())) {
     return Response.json({ error: "Admin only" }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (body?.mode === "single") {
+    const result = await scanSingleSong({
+      songId: typeof body.songId === "string" ? body.songId : undefined,
+      title: String(body.title || ""),
+      artist: String(body.artist || ""),
+      isrc: String(body.isrc || ""),
+      upc: String(body.upc || ""),
+      aliases: Array.isArray(body.aliases) ? body.aliases.map(String) : [],
+      durationSec: Number(body.durationSec) || 0,
+    });
+    const status = result.status === "failed" ? 500 : result.status === "no_title" ? 400 : 200;
+    return Response.json({ data: result }, { status });
   }
 
   const summary = await runCopyrightScan(cron ? "cron" : "manual");
