@@ -20,7 +20,7 @@ export async function createSystemNotification(
   type: string,
   title: string,
   message: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     const all: Notification[] = (await kv.get<Notification[]>(NOTIFICATIONS_KEY)) || [];
     all.unshift({
@@ -34,7 +34,9 @@ export async function createSystemNotification(
       createdDate: new Date().toISOString(),
     });
     await kv.set(NOTIFICATIONS_KEY, all.slice(0, 500));
+    return true;
   } catch {
     console.error("[Notifications] Failed to create notification");
+    return false;
   }
 }
