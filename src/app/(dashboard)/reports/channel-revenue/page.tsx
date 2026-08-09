@@ -117,7 +117,7 @@ export default function ChannelRevenuePage() {
     endDate: dates.endDate,
     prevStartDate: dates.startDate,
     prevEndDate: dates.endDate,
-    ...(isMonthRange ? { monthly: dateRange } : {}),
+    ...(isMonthRange ? { monthly: dateRange } : { rangeCache: "true" }),
     ...(activeChannelIds.length > 0 ? { channelIds: activeChannelIds.join(",") } : {}),
   }), [dates.startDate, dates.endDate, activeChannelIds, isMonthRange, dateRange]);
 

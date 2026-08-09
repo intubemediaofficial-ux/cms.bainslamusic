@@ -25,6 +25,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 import { downloadExcel } from "@/lib/excel-export";
 import {
   parseChannelSheetPreview,
@@ -67,6 +68,16 @@ interface Match {
   status: string;
   note: string;
   detectedAt: string;
+}
+
+interface QuickCheckResult {
+  status: string;
+  matches: Match[];
+  unitsUsed: number;
+  queries: string[];
+  saved: number;
+  note: string;
+  songTitle: string;
 }
 
 interface WhitelistEntry {
@@ -144,6 +155,13 @@ function formatDuration(seconds: number): string {
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
+/** "3:45" / "225" / "1:02:03" -> seconds. */
+function parseDurationText(value: string): number {
+  const parts = value.trim().split(":").map((part) => Number(part.trim()));
+  if (parts.some((part) => !Number.isFinite(part))) return 0;
+  return parts.reduce((total, part) => total * 60 + part, 0);
+}
+
 function formatDate(value: string): string {
   if (!value) return "—";
   const date = new Date(value);
@@ -184,6 +202,8 @@ export default function AdminCopyrightPage() {
   const [draft, setDraft] = useState<(Partial<Song> & { aliasText: string; durationText: string }) | null>(null);
   const [channelInput, setChannelInput] = useState("");
   const [channelPreview, setChannelPreview] = useState<ChannelSheetPreview | null>(null);
+  const [quickCheck, setQuickCheck] = useState({ title: "", artist: "", isrc: "", upc: "", duration: "" });
+  const [quickResult, setQuickResult] = useState<QuickCheckResult | null>(null);
 
   const songFileRef = useRef<HTMLInputElement>(null);
   const channelFileRef = useRef<HTMLInputElement>(null);
@@ -448,6 +468,39 @@ export default function AdminCopyrightPage() {
     await addChannels(rows);
   };
 
+  const runQuickCheck = async (input: {
+    songId?: string;
+    title: string;
+    artist?: string;
+    isrc?: string;
+    upc?: string;
+    aliases?: string[];
+    durationSec?: number;
+  }) => {
+    if (!input.title.trim()) {
+      setBanner({ kind: "error", text: "Song title is required for a check." });
+      return;
+    }
+    setBusy(input.songId ? `check-${input.songId}` : "quick-check");
+    setBanner(null);
+    setQuickResult(null);
+    try {
+      const response = await fetch("/api/copyright/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "single", ...input }),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || json.data?.note || "Check failed");
+      setQuickResult({ ...json.data, songTitle: input.title });
+      if (json.data.saved > 0) await loadAll();
+    } catch (error) {
+      setBanner({ kind: "error", text: error instanceof Error ? error.message : "Check failed." });
+    } finally {
+      setBusy("");
+    }
+  };
+
   const removeWhitelisted = async (entry: WhitelistEntry) => {
     setBusy(entry.channelId);
     try {
@@ -638,6 +691,130 @@ export default function AdminCopyrightPage() {
             />
           </div>
 
+          <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+            <div>
+              <h3 className="font-semibold text-slate-900">Check one song now</h3>
+              <p className="text-xs text-slate-500">
+                Enter a title (ISRC / UPC / artist / length make it sharper) and get the public
+                uploads that look like a copy straight away — no waiting for the scheduled sweep.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+              <input
+                value={quickCheck.title}
+                onChange={(event) => setQuickCheck({ ...quickCheck, title: event.target.value })}
+                placeholder="Song title *"
+                className="px-3 py-2 text-sm rounded-lg border border-slate-200 sm:col-span-2"
+              />
+              <input
+                value={quickCheck.artist}
+                onChange={(event) => setQuickCheck({ ...quickCheck, artist: event.target.value })}
+                placeholder="Artist / singer"
+                className="px-3 py-2 text-sm rounded-lg border border-slate-200"
+              />
+              <input
+                value={quickCheck.isrc}
+                onChange={(event) => setQuickCheck({ ...quickCheck, isrc: event.target.value })}
+                placeholder="ISRC"
+                className="px-3 py-2 text-sm rounded-lg border border-slate-200"
+              />
+              <input
+                value={quickCheck.upc}
+                onChange={(event) => setQuickCheck({ ...quickCheck, upc: event.target.value })}
+                placeholder="UPC"
+                className="px-3 py-2 text-sm rounded-lg border border-slate-200"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                value={quickCheck.duration}
+                onChange={(event) => setQuickCheck({ ...quickCheck, duration: event.target.value })}
+                placeholder="Length e.g. 3:45"
+                className="px-3 py-2 text-sm rounded-lg border border-slate-200 w-40"
+              />
+              <button
+                onClick={() =>
+                  runQuickCheck({
+                    title: quickCheck.title,
+                    artist: quickCheck.artist,
+                    isrc: quickCheck.isrc,
+                    upc: quickCheck.upc,
+                    durationSec: parseDurationText(quickCheck.duration),
+                  })
+                }
+                disabled={busy === "quick-check"}
+                className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-primary text-white disabled:opacity-60"
+              >
+                {busy === "quick-check" ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+                Check now
+              </button>
+              {quickResult && (
+                <button
+                  onClick={() => setQuickResult(null)}
+                  className="text-sm text-slate-500 hover:underline"
+                >
+                  Clear result
+                </button>
+              )}
+            </div>
+
+            {quickResult && (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500">
+                  “{quickResult.songTitle}” — {quickResult.note}
+                  {quickResult.saved > 0 && ` · ${quickResult.saved} added to Matches`} ·{" "}
+                  {quickResult.unitsUsed} quota units used
+                </p>
+                {quickResult.matches.length > 0 && (
+                  <div className="border border-slate-100 rounded-lg divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                    {quickResult.matches.map((match) => (
+                      <div key={match.id} className="flex items-start gap-3 p-3">
+                        {match.thumbnailUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={match.thumbnailUrl}
+                            alt=""
+                            className="w-24 rounded-md flex-shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <a
+                            href={match.videoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-medium text-slate-900 hover:text-primary break-words"
+                          >
+                            {match.videoTitle}
+                          </a>
+                          <div className="text-xs text-slate-500">
+                            <a
+                              href={match.channelUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="hover:underline"
+                            >
+                              {match.channelTitle}
+                            </a>
+                            {" · "}
+                            {formatNumber(match.views)} views · {formatDuration(match.durationSec)} ·{" "}
+                            {formatDate(match.publishedAt)}
+                          </div>
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 flex-shrink-0">
+                          {match.matchScore}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <p className="text-xs text-slate-500">
             Re-uploading a bigger sheet is safe: songs already in the catalog are updated (matched on
             ISRC, otherwise title + artist) and only the new ones are added.
@@ -704,6 +881,28 @@ export default function AdminCopyrightPage() {
                           title="Edit"
                         >
                           <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() =>
+                            runQuickCheck({
+                              songId: song.id,
+                              title: song.title,
+                              artist: song.artist,
+                              isrc: song.isrc,
+                              upc: song.upc,
+                              aliases: song.aliases,
+                              durationSec: song.durationSec,
+                            })
+                          }
+                          disabled={busy === `check-${song.id}`}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-60"
+                          title="Check this song now"
+                        >
+                          {busy === `check-${song.id}` ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Search className="w-4 h-4" />
+                          )}
                         </button>
                         <button
                           onClick={() => deleteSong(song)}

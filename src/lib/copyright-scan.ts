@@ -249,6 +249,173 @@ async function getExcludedChannelIds(): Promise<Set<string>> {
   return excluded;
 }
 
+export interface SingleSongCheckInput {
+  songId?: string;
+  title: string;
+  artist?: string;
+  isrc?: string;
+  upc?: string;
+  aliases?: string[];
+  durationSec?: number;
+}
+
+export interface SingleSongCheckResult {
+  status: "completed" | "no_api_key" | "no_title" | "quota" | "failed";
+  matches: CopyrightMatch[];
+  unitsUsed: number;
+  unitsUsedToday: number;
+  queries: string[];
+  saved: number;
+  note: string;
+}
+
+/**
+ * Check one song right now, independent of the scheduled sweep: searches the
+ * whole of YouTube (no `publishedAfter`), scores every hit locally, and returns
+ * them sorted by confidence. Matches for a catalog song are also stored so they
+ * show up in the Matches tab; an ad-hoc title/ISRC/UPC lookup is not stored.
+ */
+export async function scanSingleSong(
+  input: SingleSongCheckInput
+): Promise<SingleSongCheckResult> {
+  const base: SingleSongCheckResult = {
+    status: "completed",
+    matches: [],
+    unitsUsed: 0,
+    unitsUsedToday: await getUnitsUsedToday(),
+    queries: [],
+    saved: 0,
+    note: "",
+  };
+
+  const title = input.title.trim();
+  if (!title) return { ...base, status: "no_title", note: "Song title is required" };
+
+  const youtube = getApiKeyYouTube();
+  if (!youtube) {
+    return { ...base, status: "no_api_key", note: "YOUTUBE_API_KEY / GOOGLE_API_KEY is not set" };
+  }
+
+  const config = await getScanConfig();
+  const now = new Date().toISOString();
+  const song: CatalogSong = {
+    id: input.songId || `adhoc:${title}`,
+    title,
+    artist: (input.artist || "").trim(),
+    isrc: (input.isrc || "").trim(),
+    upc: (input.upc || "").trim(),
+    aliases: (input.aliases || []).map((alias) => alias.trim()).filter(Boolean),
+    durationSec: Number(input.durationSec) || 0,
+    originalVideoUrl: "",
+    releaseDate: "",
+    priority: "high",
+    active: true,
+    lastScannedAt: "",
+    lastMatchCount: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  // A manual check is worth the extra queries: every alias, plus the ISRC/UPC
+  // which "- Topic" art tracks often carry in their description.
+  const queries = [...buildQueries(song, 3 + song.aliases.length)];
+  if (song.isrc) queries.push(song.isrc);
+  if (song.upc) queries.push(song.upc);
+
+  const excludedChannels = await getExcludedChannelIds();
+  const existingMatches = await getMatches();
+  const knownMatchIds = new Set(existingMatches.map((match) => match.id));
+
+  let unitsUsed = 0;
+  const candidateIds = new Set<string>();
+  const matchedOnByVideo = new Map<string, string>();
+  let quotaHit = false;
+
+  for (const query of queries) {
+    try {
+      const response = await youtube.search.list({
+        part: ["snippet"],
+        q: query,
+        type: ["video"],
+        maxResults: 50,
+      });
+      unitsUsed += UNITS_SEARCH;
+      for (const item of response.data.items || []) {
+        const videoId = item.id?.videoId;
+        const channelId = item.snippet?.channelId || "";
+        if (!videoId) continue;
+        if (channelId && excludedChannels.has(channelId)) continue;
+        if (!matchedOnByVideo.has(videoId)) matchedOnByVideo.set(videoId, `search: ${query}`);
+        candidateIds.add(videoId);
+      }
+    } catch (error) {
+      if (isSearchQuotaError(error)) {
+        quotaHit = true;
+        break;
+      }
+      console.warn(`[copyright-scan] single check failed for "${query}":`, error);
+    }
+  }
+
+  if (candidateIds.size === 0) {
+    const unitsUsedToday = await addUnitsUsed(unitsUsed);
+    return {
+      ...base,
+      status: quotaHit ? "quota" : "completed",
+      unitsUsed,
+      unitsUsedToday,
+      queries,
+      note: quotaHit
+        ? "YouTube's daily search-query limit is reached — try again tomorrow"
+        : "No public uploads matched this song",
+    };
+  }
+
+  const { details, units } = await fetchVideoDetails(youtube, [...candidateIds]);
+  unitsUsed += units;
+
+  const found: CopyrightMatch[] = [];
+  for (const detail of details.values()) {
+    if (detail.channelId && excludedChannels.has(detail.channelId)) continue;
+    const score = scoreCandidate(song, detail.title, detail.channelTitle, detail.durationSec);
+    if (score < config.minMatchScore) continue;
+    found.push(buildMatch(song, detail, score, matchedOnByVideo.get(detail.id) || "manual check"));
+  }
+  found.sort((a, b) => b.matchScore - a.matchScore);
+
+  let saved = 0;
+  if (input.songId) {
+    const fresh = found.filter((match) => !knownMatchIds.has(match.id));
+    if (fresh.length > 0) {
+      await saveMatches([...fresh, ...existingMatches]);
+      saved = fresh.length;
+    }
+    const songs = await getSongs();
+    const index = songs.findIndex((entry) => entry.id === input.songId);
+    if (index >= 0) {
+      songs[index] = {
+        ...songs[index],
+        lastScannedAt: new Date().toISOString(),
+        lastMatchCount: found.length,
+      };
+      await saveSongs(songs);
+    }
+  }
+
+  const unitsUsedToday = await addUnitsUsed(unitsUsed);
+  return {
+    status: quotaHit ? "quota" : "completed",
+    matches: found,
+    unitsUsed,
+    unitsUsedToday,
+    queries,
+    saved,
+    note: quotaHit
+      ? `${found.length} match(es) before YouTube's daily search-query limit stopped the check`
+      : `${found.length} match(es) from ${queries.length} search(es)`,
+  };
+}
+
 export async function runCopyrightScan(
   trigger: ScanTrigger = "cron"
 ): Promise<ScanSummary> {

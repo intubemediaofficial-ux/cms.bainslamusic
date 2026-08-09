@@ -6,6 +6,7 @@ import {
   syncClientData,
 } from "@/lib/client-data-sync";
 import { syncAllConfiguredVendorGoogleSheets } from "@/lib/vendor-google-sheets";
+import { getAssignedChannelIds, refreshMonthlyChannels } from "@/lib/monthly-channel-analytics";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -35,6 +36,27 @@ async function isAdminRequest(): Promise<boolean> {
   return ADMIN_EMAILS.includes(session?.user?.email?.toLowerCase() || "");
 }
 
+/**
+ * Pull every assigned channel's monthly revenue again, ignoring the cache's
+ * staleness rules, so YouTube's later revisions (the odd $1-2 correction)
+ * land in the dashboard and in the vendor sheets.
+ */
+async function monthlyResync(monthsParam: string | null) {
+  const monthsBack = Math.min(6, Math.max(1, Number(monthsParam) || 2));
+  const channelIds = await getAssignedChannelIds();
+  const now = new Date();
+  const refreshed = [];
+
+  for (let i = 0; i < monthsBack; i++) {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const month = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+    refreshed.push(await refreshMonthlyChannels(month, channelIds));
+  }
+
+  const sheets = await syncAllConfiguredVendorGoogleSheets();
+  return { channels: channelIds.length, months: refreshed, sheets };
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
@@ -49,6 +71,9 @@ export async function GET(request: Request) {
   }
   if (action === "vendor-sheet") {
     return Response.json({ data: await syncAllConfiguredVendorGoogleSheets() });
+  }
+  if (action === "monthly-resync") {
+    return Response.json({ data: await monthlyResync(url.searchParams.get("months")) });
   }
 
   const mode = getMode(request);

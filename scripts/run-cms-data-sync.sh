@@ -2,12 +2,12 @@
 set -euo pipefail
 
 MODE="${1:-}"
-APP_DIR="${CMS_APP_DIR:-/var/www/cms-frontend}"
+APP_DIR="${CMS_APP_DIR:-/var/www/cms-bainslamusic}"
 ENV_FILE="${APP_DIR}/.env.local"
-SYNC_URL="${CMS_SYNC_URL:-http://127.0.0.1:3000/api/sync-client-data}"
+SYNC_URL="${CMS_SYNC_URL:-http://127.0.0.1:3190/api/sync-client-data}"
 
-if [[ "${MODE}" != "stats" && "${MODE}" != "revenue" && "${MODE}" != "sheet" ]]; then
-  echo "Usage: $0 stats|revenue|sheet" >&2
+if [[ "${MODE}" != "stats" && "${MODE}" != "revenue" && "${MODE}" != "sheet" && "${MODE}" != "monthly" ]]; then
+  echo "Usage: $0 stats|revenue|sheet|monthly" >&2
   exit 2
 fi
 
@@ -27,7 +27,7 @@ if [[ -z "${CRON_SECRET}" ]]; then
   exit 1
 fi
 
-LOCK_FILE="/var/lock/cms-data-sync-${MODE}.lock"
+LOCK_FILE="/var/lock/cms-bainslamusic-data-sync-${MODE}.lock"
 exec 9>"${LOCK_FILE}"
 if ! flock -n 9; then
   echo "${MODE} sync is already running"
@@ -41,6 +41,9 @@ if [[ "${MODE}" == "revenue" ]]; then
 elif [[ "${MODE}" == "sheet" ]]; then
   MAX_TIME=300
   QUERY="action=vendor-sheet"
+elif [[ "${MODE}" == "monthly" ]]; then
+  MAX_TIME=1800
+  QUERY="action=monthly-resync&months=${CMS_RESYNC_MONTHS:-2}"
 fi
 
 curl --fail --silent --show-error \
