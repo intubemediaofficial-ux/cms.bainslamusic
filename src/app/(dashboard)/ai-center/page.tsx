@@ -136,11 +136,17 @@ interface AiResponseData {
 
 type Section = "overview" | "assistant" | "content" | "reconciliation" | "copyright";
 
+interface ChatTurn {
+  role: "user" | "model";
+  text: string;
+}
+
 const questionSuggestions = [
   "आज सबसे जरूरी revenue risk क्या है?",
   "कौन से channels की health सबसे कम है?",
   "इस महीने का forecast समझाओ",
   "पिछले महीने के मुकाबले performance कैसी है?",
+  "इस महीने किस-किस का payment pending है?",
 ];
 
 function dateTime(value: string | null | undefined): string {
@@ -171,7 +177,7 @@ export default function AiCenterPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [chat, setChat] = useState<ChatTurn[]>([]);
   const [asking, setAsking] = useState(false);
   const [dailySummary, setDailySummary] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -204,7 +210,7 @@ export default function AiCenterPage() {
           : nextData.insights.channels[0]?.channelId || ""
       );
       setDailySummary("");
-      setAnswer("");
+      setChat([]);
       setContentIdeas("");
       setReconciliationText("");
       setCopyrightText("");
@@ -241,11 +247,15 @@ export default function AiCenterPage() {
   const askQuestion = async (nextQuestion?: string) => {
     const value = (nextQuestion || question).trim();
     if (!value) return;
-    setQuestion(value);
+    // Earlier turns travel with the request so follow-ups keep their subject.
+    const history = chat.map((turn) => ({ role: turn.role, text: turn.text }));
+    setChat([...chat, { role: "user", text: value }]);
+    setQuestion("");
     setAsking(true);
     setError("");
     try {
-      setAnswer(await postAi({ action: "ask", question: value }));
+      const text = await postAi({ action: "ask", question: value, history });
+      setChat((current) => [...current, { role: "model", text }]);
     } catch (askError) {
       setError(askError instanceof Error ? askError.message : "AI request failed");
     } finally {
@@ -574,9 +584,19 @@ export default function AiCenterPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-              <Bot className="h-5 w-5 text-violet-600" /> Ask about {insights.scopeLabel}
-            </h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                <Bot className="h-5 w-5 text-violet-600" /> Ask about {insights.scopeLabel}
+              </h2>
+              {chat.length > 0 && (
+                <button
+                  onClick={() => setChat([])}
+                  className="text-xs font-semibold text-slate-500 hover:text-violet-600"
+                >
+                  New chat
+                </button>
+              )}
+            </div>
             <div className="mt-4 flex gap-2">
               <textarea
                 value={question}
@@ -598,8 +618,26 @@ export default function AiCenterPage() {
                 {asking ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               </button>
             </div>
-            <div className="mt-5 min-h-64 whitespace-pre-wrap rounded-2xl bg-slate-950 p-5 text-sm leading-7 text-slate-100">
-              {asking ? "Analyzing the tenant-safe cache…" : answer || "AI answer will appear here. It can read cache data but cannot change anything."}
+            <div className="mt-5 min-h-64 space-y-3 rounded-2xl bg-slate-950 p-5 text-sm leading-7 text-slate-100">
+              {chat.length === 0 && !asking && (
+                <p className="text-slate-400">
+                  AI answer will appear here. यह chat पिछले सवाल याद रखती है — “और जून में?” जैसे
+                  follow-up सीधे पूछ सकते हैं। यह data पढ़ सकता है, बदल नहीं सकता।
+                </p>
+              )}
+              {chat.map((turn, index) => (
+                <div
+                  key={`${turn.role}-${index}`}
+                  className={
+                    turn.role === "user"
+                      ? "ml-auto max-w-[85%] whitespace-pre-wrap rounded-xl bg-violet-600 px-4 py-2 text-white"
+                      : "max-w-[95%] whitespace-pre-wrap rounded-xl bg-slate-800/70 px-4 py-2"
+                  }
+                >
+                  {turn.text}
+                </div>
+              ))}
+              {asking && <p className="text-slate-400">Analyzing the tenant-safe cache…</p>}
             </div>
           </div>
         </div>

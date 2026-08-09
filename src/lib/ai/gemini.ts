@@ -18,9 +18,16 @@ interface GeminiResponse {
   };
 }
 
+export interface GeminiTurn {
+  role: "user" | "model";
+  text: string;
+}
+
 interface GenerateGeminiTextOptions {
   systemInstruction: string;
   prompt: string;
+  /** Earlier turns of the same conversation, oldest first. */
+  history?: GeminiTurn[];
   temperature?: number;
   maxOutputTokens?: number;
 }
@@ -36,6 +43,7 @@ export function getGeminiModel(): string {
 export async function generateGeminiText({
   systemInstruction,
   prompt,
+  history = [],
   temperature = 0.2,
   maxOutputTokens = 1600,
 }: GenerateGeminiTextOptions): Promise<string> {
@@ -56,6 +64,10 @@ export async function generateGeminiText({
           parts: [{ text: systemInstruction.slice(0, 12000) }],
         },
         contents: [
+          ...history.slice(-12).map((turn) => ({
+            role: turn.role,
+            parts: [{ text: turn.text.slice(0, 4000) }],
+          })),
           {
             role: "user",
             parts: [{ text: prompt.slice(0, 16000) }],

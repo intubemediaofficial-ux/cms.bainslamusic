@@ -13,6 +13,9 @@ import {
 } from "@/lib/ai/analytics";
 
 const USERS_KEY = "bainsla_users";
+const PAYMENTS_KEY = "bainsla_payments";
+const WITHDRAWALS_KEY = "bainsla_withdrawals";
+const NETWORKS_KEY = "bainsla_networks";
 const MONTHLY_PREFIX = "monthly_channel_analytics:";
 const TOKEN_PREFIX = "channel_token:";
 const ADMIN_EMAILS = new Set([
@@ -30,6 +33,50 @@ export interface AiScopeUser {
   parentId?: string;
   channels?: string[];
   channelNetworks?: Array<{ channelId: string; networkName: string }>;
+  joinedDate?: string;
+  phone?: string;
+  category?: string;
+  revenueSharePercent?: number;
+}
+
+interface StoredPayment {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  networkName: string;
+  revenueSharePercent: number;
+  month: string;
+  fromDate: string;
+  toDate: string;
+  totalAmount: number;
+  tdsPercent: number;
+  tdsAmount: number;
+  networkRevenue: number;
+  netTotal: number;
+  paidAmount: number;
+  status: "pending" | "paid" | "partial";
+  createdDate: string;
+  paidDate: string;
+  notes: string;
+}
+
+interface StoredWithdrawal {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  amount: number;
+  status: string;
+  requestDate: string;
+  processedDate: string;
+  adminNote: string;
+}
+
+interface StoredNetwork {
+  id: string;
+  name: string;
+  revenueSharePercent: number;
 }
 
 interface MonthlyChannelData {
@@ -303,12 +350,16 @@ export async function buildAiDashboardContext({
   const now = new Date();
   const currentMonth = monthKey(now);
   const previousMonth = previousMonthKey(now);
-  const [users, caches, currentMonthly, previousMonthly] = await Promise.all([
-    kv.get<AiScopeUser[]>(USERS_KEY).then((value) => value || []),
-    getAllCachedClientData(),
-    kv.get<MonthlyChannelCache>(`${MONTHLY_PREFIX}${currentMonth}`),
-    kv.get<MonthlyChannelCache>(`${MONTHLY_PREFIX}${previousMonth}`),
-  ]);
+  const [users, caches, currentMonthly, previousMonthly, payments, withdrawals, networks] =
+    await Promise.all([
+      kv.get<AiScopeUser[]>(USERS_KEY).then((value) => value || []),
+      getAllCachedClientData(),
+      kv.get<MonthlyChannelCache>(`${MONTHLY_PREFIX}${currentMonth}`),
+      kv.get<MonthlyChannelCache>(`${MONTHLY_PREFIX}${previousMonth}`),
+      kv.get<StoredPayment[]>(PAYMENTS_KEY).then((value) => value || []),
+      kv.get<StoredWithdrawal[]>(WITHDRAWALS_KEY).then((value) => value || []),
+      kv.get<StoredNetwork[]>(NETWORKS_KEY).then((value) => value || []),
+    ]);
 
   const scope = resolveScope(users, email, role, requestedScopeId);
   const allowedChannelIds = new Set(
@@ -476,8 +527,90 @@ export async function buildAiDashboardContext({
       .slice(0, 30),
     channels,
   };
+  // Payment/withdraw ledgers are the only record of what a person was actually
+  // paid, so the assistant must read them instead of inferring an amount.
+  // An Admin already sees every row in the dashboard; a company or client is
+  // limited to their own scope.
+  const scopeUserIds = new Set(scope.selectedUsers.map((user) => user.id));
+  const scopeEmails = new Set(
+    scope.selectedUsers.map((user) => user.email.toLowerCase())
+  );
+  const inScope = (row: { userId?: string; userEmail?: string }): boolean =>
+    scope.isAdmin ||
+    scopeUserIds.has(row.userId || "") ||
+    scopeEmails.has((row.userEmail || "").toLowerCase());
+
+  const scopedPayments = payments
+    .filter(inScope)
+    .sort((a, b) => (b.month || "").localeCompare(a.month || ""))
+    .slice(0, 300)
+    .map((payment) => ({
+      person: payment.userName,
+      email: payment.userEmail,
+      month: payment.month,
+      period: payment.fromDate && payment.toDate ? `${payment.fromDate} to ${payment.toDate}` : "",
+      network: payment.networkName,
+      revenueSharePercent: payment.revenueSharePercent,
+      grossAmount: payment.totalAmount,
+      tdsPercent: payment.tdsPercent,
+      tdsAmount: payment.tdsAmount,
+      netPayable: payment.netTotal,
+      actuallyPaid: payment.paidAmount,
+      outstanding: rounded((payment.netTotal || 0) - (payment.paidAmount || 0)),
+      status: payment.status,
+      paidDate: payment.paidDate,
+      notes: payment.notes,
+    }));
+
+  const scopedWithdrawals = withdrawals
+    .filter(inScope)
+    .sort((a, b) => (b.requestDate || "").localeCompare(a.requestDate || ""))
+    .slice(0, 100)
+    .map((withdrawal) => ({
+      person: withdrawal.userName,
+      email: withdrawal.userEmail,
+      amount: withdrawal.amount,
+      status: withdrawal.status,
+      requestedOn: withdrawal.requestDate,
+      processedOn: withdrawal.processedDate,
+      adminNote: withdrawal.adminNote,
+    }));
+
+  const people = (scope.isAdmin ? users : scope.selectedUsers).map((user) => ({
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    joinedDate: user.joinedDate,
+    channelCount: (user.channels || []).length,
+    revenueSharePercent: user.revenueSharePercent,
+  }));
+
   const promptContext = JSON.stringify(
     {
+      today: {
+        date: now.toISOString().slice(0, 10),
+        month: currentMonth,
+        monthLabel: now.toLocaleString("en-US", {
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC",
+        }),
+        previousMonth,
+      },
+      recordCounts: {
+        payments: scopedPayments.length,
+        withdrawals: scopedWithdrawals.length,
+        people: people.length,
+        networks: networks.length,
+      },
+      payments: scopedPayments,
+      withdrawals: scopedWithdrawals,
+      people,
+      networks: networks.map((network) => ({
+        name: network.name,
+        revenueSharePercent: network.revenueSharePercent,
+      })),
       scope: {
         id: insights.scopeId,
         label: insights.scopeLabel,
