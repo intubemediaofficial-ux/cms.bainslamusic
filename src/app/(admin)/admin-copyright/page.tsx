@@ -26,7 +26,11 @@ import {
   X,
 } from "lucide-react";
 import { downloadExcel } from "@/lib/excel-export";
-import { parseChannelSheet, parseSongSheet } from "@/lib/copyright-import";
+import {
+  parseChannelSheetPreview,
+  parseSongSheet,
+  type ChannelSheetPreview,
+} from "@/lib/copyright-import";
 
 interface Song {
   id: string;
@@ -179,6 +183,7 @@ export default function AdminCopyrightPage() {
   const [matchStatusFilter, setMatchStatusFilter] = useState("new");
   const [draft, setDraft] = useState<(Partial<Song> & { aliasText: string; durationText: string }) | null>(null);
   const [channelInput, setChannelInput] = useState("");
+  const [channelPreview, setChannelPreview] = useState<ChannelSheetPreview | null>(null);
 
   const songFileRef = useRef<HTMLInputElement>(null);
   const channelFileRef = useRef<HTMLInputElement>(null);
@@ -420,18 +425,27 @@ export default function AdminCopyrightPage() {
 
   const importChannels = async (file: File) => {
     setBusy("import-channels");
+    setBanner(null);
     try {
-      const rows = await parseChannelSheet(file);
-      if (rows.length === 0) {
-        setBanner({ kind: "error", text: "No channel IDs or links found in that sheet." });
+      const preview = await parseChannelSheetPreview(file);
+      if (preview.valid.length === 0) {
+        setChannelPreview(null);
+        setBanner({ kind: "error", text: "No channel IDs, links or @handles found in that sheet." });
         return;
       }
-      await addChannels(rows);
+      setChannelPreview(preview);
     } catch (error) {
       setBanner({ kind: "error", text: error instanceof Error ? error.message : "Import failed." });
     } finally {
       setBusy("");
     }
+  };
+
+  const confirmChannelImport = async () => {
+    if (!channelPreview) return;
+    const rows = channelPreview.valid;
+    setChannelPreview(null);
+    await addChannels(rows);
   };
 
   const removeWhitelisted = async (entry: WhitelistEntry) => {
@@ -905,6 +919,68 @@ export default function AdminCopyrightPage() {
               }}
             />
           </div>
+
+          {channelPreview && (
+            <div className="bg-white rounded-xl border border-amber-300 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-slate-900">
+                  Review before saving — {channelPreview.valid.length} channel(s) ready
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setChannelPreview(null)}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmChannelImport}
+                    disabled={busy === "whitelist"}
+                    className="px-3 py-1.5 text-sm rounded-lg bg-primary text-white disabled:opacity-60"
+                  >
+                    Confirm and whitelist
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                {channelPreview.duplicates.length} duplicate row(s) and{" "}
+                {channelPreview.invalid.length} row(s) without a channel URL / @handle / UC id will
+                be skipped. Nothing is saved until you confirm.
+              </p>
+              <div className="max-h-64 overflow-y-auto border border-slate-100 rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                    <tr>
+                      <th className="text-left px-3 py-2">Channel</th>
+                      <th className="text-left px-3 py-2">Channel ID</th>
+                      <th className="text-left px-3 py-2">Link / handle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {channelPreview.valid.map((row, index) => (
+                      <tr key={`${row.channelId}-${row.url}-${index}`} className="border-t border-slate-100">
+                        <td className="px-3 py-2">{row.channelTitle || "—"}</td>
+                        <td className="px-3 py-2 font-mono text-xs">{row.channelId || "—"}</td>
+                        <td className="px-3 py-2 text-xs break-all">{row.url || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {channelPreview.invalid.length > 0 && (
+                <details className="text-xs text-slate-500">
+                  <summary className="cursor-pointer">Skipped rows</summary>
+                  <ul className="mt-2 space-y-1">
+                    {channelPreview.invalid.slice(0, 25).map((row) => (
+                      <li key={row.row}>
+                        Row {row.row}: {row.sample || "(empty)"}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+          )}
 
           <p className="text-xs text-slate-500">
             Whitelisted channels never show up as suspected copies. Channels authorised inside this

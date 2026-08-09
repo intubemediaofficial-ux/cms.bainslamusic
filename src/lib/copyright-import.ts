@@ -79,28 +79,79 @@ export async function parseSongSheet(file: File): Promise<ImportedSongRow[]> {
 }
 
 const UC_ID = /(UC[\w-]{20,})/;
+const HANDLE = /^@[\w.\-]{3,}$/;
+const CHANNEL_URL =
+  /youtube\.com\/(channel\/UC[\w-]{20,}|@[\w.\-]{3,}|c\/[\w.\-]+|user\/[\w.\-]+)/i;
+
+export interface ChannelSheetPreview {
+  /** Deduplicated rows that carry a usable channel reference. */
+  valid: ImportedChannelRow[];
+  /** Rows repeating a reference already present in `valid`. */
+  duplicates: ImportedChannelRow[];
+  /** Rows that held no channel URL, @handle or UC id. */
+  invalid: { row: number; sample: string }[];
+}
+
+async function readMatrix(file: File): Promise<string[][]> {
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const firstSheet = workbook.SheetNames[0];
+  if (!firstSheet) return [];
+  return XLSX.utils
+    .sheet_to_json<unknown[]>(workbook.Sheets[firstSheet], { header: 1, defval: "" })
+    .map((row) => row.map((value) => String(value ?? "").trim()));
+}
+
+function channelReference(values: string[]): { channelId: string; url: string } {
+  const channelId = values.map((value) => value.match(UC_ID)?.[1]).find(Boolean) || "";
+  const url =
+    values.find((value) => CHANNEL_URL.test(value)) ||
+    values.find((value) => HANDLE.test(value)) ||
+    "";
+  return { channelId, url };
+}
 
 /**
- * Parse a channel sheet for the whitelist. Any column layout works: a UC id or
- * a YouTube link/handle is picked out of whichever cell holds it.
+ * Scan every cell of a channel sheet — header row included — and split the rows
+ * into the whitelist candidates, the repeats, and the cells that hold no
+ * channel reference at all. Nothing is saved until an admin confirms.
  */
-export async function parseChannelSheet(file: File): Promise<ImportedChannelRow[]> {
-  const rows = await readRows(file);
-  const channels: ImportedChannelRow[] = [];
+export async function parseChannelSheetPreview(file: File): Promise<ChannelSheetPreview> {
+  const matrix = await readMatrix(file);
+  const valid: ImportedChannelRow[] = [];
+  const duplicates: ImportedChannelRow[] = [];
+  const invalid: { row: number; sample: string }[] = [];
+  const seen = new Set<string>();
 
-  for (const row of rows) {
-    const values = Object.values(row).map((value) => String(value ?? "").trim());
-    const idCell = values.find((value) => UC_ID.test(value)) || "";
-    const channelId = idCell.match(UC_ID)?.[1] || "";
-    const url =
-      values.find((value) => /youtube\.com|youtu\.be/i.test(value)) ||
-      values.find((value) => /^@[\w.\-]+$/.test(value)) ||
-      "";
-    const channelTitle = cell(row, [/channel\s*name|channel\s*title|^name$|^channel$|title/i]);
+  matrix.forEach((values, index) => {
+    if (values.every((value) => value === "")) return;
 
-    if (!channelId && !url) continue;
-    channels.push({ channelId, channelTitle, url });
-  }
+    const { channelId, url } = channelReference(values);
+    if (!channelId && !url) {
+      invalid.push({ row: index + 1, sample: values.filter(Boolean).join(" | ").slice(0, 120) });
+      return;
+    }
 
-  return channels;
+    const channelTitle =
+      values.find(
+        (value) =>
+          value !== channelId &&
+          value !== url &&
+          !UC_ID.test(value) &&
+          !/https?:\/\//i.test(value) &&
+          !HANDLE.test(value) &&
+          value.length > 1
+      ) || "";
+    const row: ImportedChannelRow = { channelId, channelTitle, url };
+    const key = (channelId || url).toLowerCase();
+
+    if (seen.has(key)) {
+      duplicates.push(row);
+      return;
+    }
+    seen.add(key);
+    valid.push(row);
+  });
+
+  return { valid, duplicates, invalid };
 }

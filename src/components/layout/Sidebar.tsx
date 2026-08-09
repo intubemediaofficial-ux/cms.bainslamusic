@@ -29,6 +29,7 @@ import {
   MessageSquare,
   ClipboardList,
   Copyright,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InTubeMediaMark } from "@/components/branding/InTubeMediaMark";
@@ -64,6 +65,7 @@ const clientNavItems: NavItem[] = [
   },
   { href: "/vendors", label: "Vendor Management", icon: Users },
   { href: "/payments", label: "Payments", icon: CreditCard },
+  { href: "/ai-center", label: "AI Center", icon: Sparkles },
   { href: "/music-distribution", label: "Music Distribution", icon: Music },
   { href: "/claim-release", label: "Claim Release", icon: ShieldCheck },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -96,6 +98,7 @@ const companyNavItems: NavItem[] = [
   },
   { href: "/vendors", label: "Vendor Management", icon: Users },
   { href: "/payments", label: "Payments", icon: CreditCard },
+  { href: "/ai-center", label: "AI Center", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -126,6 +129,7 @@ const adminNavItems: NavItem[] = [
     ],
   },
   { href: "/admin-payments", label: "Payments", icon: CreditCard },
+  { href: "/ai-center", label: "AI Center", icon: Sparkles },
   { href: "/admin-distribution", label: "Music Distribution", icon: Music },
   { href: "/admin-claims", label: "Claim Release", icon: ShieldCheck },
   { href: "/admin-copyright", label: "Copyright Monitoring", icon: Copyright },
