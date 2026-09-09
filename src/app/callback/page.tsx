@@ -20,6 +20,7 @@ function CallbackContent() {
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [kvConfigured, setKvConfigured] = useState<boolean | null>(null);
+  const [returnTo, setReturnTo] = useState<string | null>(null);
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -70,7 +71,18 @@ function CallbackContent() {
 
         setChannelInfo(result.data.channelInfo);
         setKvConfigured(result.data.kvConfigured ?? null);
+        const nextReturnTo =
+          typeof result.data.returnTo === "string" &&
+          result.data.returnTo.startsWith("/authorize-channels?")
+            ? result.data.returnTo
+            : null;
+        setReturnTo(nextReturnTo);
         setStatus("success");
+        if (nextReturnTo) {
+          setTimeout(() => {
+            window.location.assign(nextReturnTo);
+          }, 2500);
+        }
       } catch {
         setStatus("error");
         setErrorMessage("Failed to process authorization. Please try again.");
@@ -164,6 +176,15 @@ function CallbackContent() {
 
           {status === "success" && channelInfo && (
             <div className="mt-6 flex justify-end gap-3">
+              {returnTo && (
+                <a
+                  href={returnTo}
+                  className="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Back to my channel list
+                </a>
+              )}
               <a
                 href={`https://www.youtube.com/channel/${channelInfo.channelId}`}
                 className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg hover:bg-primary/90 transition-colors font-medium"
