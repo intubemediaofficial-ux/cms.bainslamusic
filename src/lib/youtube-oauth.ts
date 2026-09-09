@@ -9,6 +9,24 @@ export interface ChannelOAuthState {
   createdAt: string;
   consentedAt?: string;
   consentVersion?: string;
+  returnTo?: string;
+}
+
+export const CHANNEL_INVITE_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+export interface ChannelInviteBatch {
+  clientId: string;
+  clientEmail: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export function channelInviteKey(token: string): string | null {
+  return /^[A-Za-z0-9_-]{20,}$/.test(token) ? `channel_invite:${token}` : null;
+}
+
+export function channelInvitePath(token: string): string {
+  return `/authorize-channels?invite=${encodeURIComponent(token)}`;
 }
 
 export const YOUTUBE_OAUTH_SCOPES = [

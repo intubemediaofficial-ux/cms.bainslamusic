@@ -20,6 +20,8 @@ import {
   Clock,
   RefreshCw,
   Key,
+  Mail,
+  Copy,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -131,6 +133,51 @@ export default function AdminChannelsPage() {
   const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
   const [bulkApproving, setBulkApproving] = useState(false);
   const [bulkApproveMessage, setBulkApproveMessage] = useState<string | null>(null);
+  const [inviteClient, setInviteClient] = useState<Client | null>(null);
+  const [inviteEmails, setInviteEmails] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteResult, setInviteResult] = useState<{
+    inviteUrl: string;
+    channelCount: number;
+    pendingCount: number;
+    sent: string[];
+    failed: { email: string; error: string }[];
+  } | null>(null);
+  const [inviteError, setInviteError] = useState("");
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const openInviteModal = (client: Client) => {
+    setInviteClient(client);
+    setInviteEmails(client.email);
+    setInviteResult(null);
+    setInviteError("");
+    setInviteCopied(false);
+  };
+
+  const handleSendClientInvite = async () => {
+    if (!inviteClient) return;
+    const emails = inviteEmails.split(/[,;\s]+/).filter((e) => e.includes("@"));
+    if (emails.length === 0) {
+      setInviteError("Enter at least one email");
+      return;
+    }
+    setInviteSending(true);
+    setInviteError("");
+    try {
+      const res = await fetch("/api/channel-invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create", clientId: inviteClient.id, emails }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Invite could not be sent");
+      setInviteResult(json.data);
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : "Invite could not be sent");
+    } finally {
+      setInviteSending(false);
+    }
+  };
   const [validatingChannelId, setValidatingChannelId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [revenuePeriod, setRevenuePeriod] = useState<string>("cached");
@@ -1023,8 +1070,110 @@ export default function AdminChannelsPage() {
             <RotateCcw className="w-3.5 h-3.5" />
             Reset
           </button>
+          {clientFilter && (() => {
+            const selectedClient = clients.find((c) => c.name === clientFilter);
+            if (!selectedClient) return null;
+            const channelCount = selectedClient.channels.length + (selectedClient.pendingChannels || []).length;
+            return (
+              <button
+                onClick={() => openInviteModal(selectedClient)}
+                disabled={channelCount === 0}
+                className="flex items-center gap-1.5 text-sm bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg font-medium"
+                title="Email this client one link to authorize all their channels"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Email authorize link ({channelCount})
+              </button>
+            );
+          })()}
         </div>
       </div>
+
+      {inviteClient && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setInviteClient(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Email channel authorization link</h3>
+                <p className="text-sm text-muted mt-0.5">
+                  {inviteClient.name} · {inviteClient.channels.length + (inviteClient.pendingChannels || []).length} channels
+                </p>
+              </div>
+              <button onClick={() => setInviteClient(null)} className="text-muted hover:text-foreground">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {!inviteResult ? (
+              <>
+                <p className="text-sm text-muted mb-3">
+                  The client gets one email with a personal page listing every channel. Each channel has its own
+                  Authorize button and turns to <span className="text-green-700 font-medium">Verified</span> as soon as it is done.
+                  Link is valid for 7 days.
+                </p>
+                <label className="text-xs text-muted block mb-1">Send to (max 5, comma separated)</label>
+                <input
+                  type="text"
+                  value={inviteEmails}
+                  onChange={(e) => setInviteEmails(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                {inviteError && <p className="text-sm text-red-600 mt-2">{inviteError}</p>}
+                <div className="flex justify-end gap-2 mt-4">
+                  <button onClick={() => setInviteClient(null)} className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-slate-50">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendClientInvite}
+                    disabled={inviteSending || !inviteEmails.trim()}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                  >
+                    {inviteSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                    {inviteSending ? "Sending…" : "Send email"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {inviteResult.sent.length > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-800 mb-3">
+                    Sent to {inviteResult.sent.join(", ")} — {inviteResult.channelCount} channels ({inviteResult.pendingCount} pending).
+                  </div>
+                )}
+                {inviteResult.failed.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 mb-3">
+                    Failed: {inviteResult.failed.map((f) => `${f.email} (${f.error})`).join(", ")}
+                  </div>
+                )}
+                <label className="text-xs text-muted block mb-1">Link (share on WhatsApp if needed)</label>
+                <div className="flex items-center gap-2">
+                  <p className="flex-1 text-xs font-mono break-all bg-slate-50 border border-border rounded-lg px-3 py-2 select-all">{inviteResult.inviteUrl}</p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(inviteResult.inviteUrl);
+                        setInviteCopied(true);
+                        setTimeout(() => setInviteCopied(false), 2500);
+                      } catch {
+                        setInviteCopied(false);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm border border-border rounded-lg hover:bg-slate-50"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    {inviteCopied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button onClick={() => setInviteClient(null)} className="px-4 py-2 text-sm bg-primary text-white rounded-lg">
+                    Done
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {loadingChannels && (
         <div className="flex items-center justify-center py-8">

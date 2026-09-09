@@ -285,6 +285,10 @@ export async function POST(request: Request) {
         kvConfigured: isKVConfigured(),
         revenueSyncStatus,
         downstreamSyncStatus,
+        returnTo:
+          oauthState.returnTo && oauthState.returnTo.startsWith("/authorize-channels?")
+            ? oauthState.returnTo
+            : null,
         channelInfo: {
           channelId: expectedChannelId,
           channelTitle,
