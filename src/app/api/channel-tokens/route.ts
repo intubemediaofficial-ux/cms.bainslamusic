@@ -14,6 +14,7 @@ import {
   removeChannelFromBackend,
 } from "@/lib/backend-sync";
 import { clearChannelVendorAssignments } from "@/lib/vendors";
+import { sendEmail, getChannelInviteEmailHtml } from "@/lib/email";
 import {
   getPublicOrigin,
   type ChannelOAuthState,
@@ -324,4 +325,102 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   return GET(request);
+}
+
+const MAX_INVITE_RECIPIENTS = 5;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.user.userStatus === "inactive") {
+    return Response.json({ error: "Account is inactive" }, { status: 403 });
+  }
+
+  let body: { action?: unknown; state?: unknown; emails?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (body.action !== "sendInviteEmail") {
+    return Response.json({ error: "Invalid action" }, { status: 400 });
+  }
+
+  const state = typeof body.state === "string" ? body.state : "";
+  if (!state.startsWith("cms-oauth-")) {
+    return Response.json({ error: "Invalid authorization link" }, { status: 400 });
+  }
+  const nonce = state.slice("cms-oauth-".length);
+  const oauthState = await kv.get<ChannelOAuthState>(`channel_oauth_state:${nonce}`);
+  if (!oauthState) {
+    return Response.json(
+      { error: "Authorization link expired. Generate a new link and try again." },
+      { status: 410 }
+    );
+  }
+
+  const isAdminUser = session.user.role === "admin" || isAdmin(session.user.email);
+  if (!isAdminUser) {
+    const allowedChannelIds = await getAllowedChannelIds(session.user.email);
+    if (!allowedChannelIds.has(oauthState.channelId)) {
+      return Response.json({ error: "You can only invite for assigned channels" }, { status: 403 });
+    }
+  }
+
+  const emails = Array.from(
+    new Set(
+      (Array.isArray(body.emails) ? body.emails : [])
+        .filter((e): e is string => typeof e === "string")
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => EMAIL_RE.test(e))
+    )
+  );
+  if (emails.length === 0) {
+    return Response.json({ error: "At least one valid email is required" }, { status: 400 });
+  }
+  if (emails.length > MAX_INVITE_RECIPIENTS) {
+    return Response.json(
+      { error: `Maximum ${MAX_INVITE_RECIPIENTS} recipients per invite` },
+      { status: 400 }
+    );
+  }
+
+  const origin = getPublicOrigin(request);
+  const authorizeUrl = `${origin}/authorize-channel?state=${encodeURIComponent(state)}`;
+  const channelTitle = oauthState.channelTitle || oauthState.channelId;
+  const html = getChannelInviteEmailHtml({
+    channelTitle,
+    channelId: oauthState.channelId,
+    authorizeUrl,
+    invitedBy: session.user.name || session.user.email,
+  });
+
+  const sent: string[] = [];
+  const failed: { email: string; error: string }[] = [];
+  for (const to of emails) {
+    const result = await sendEmail({
+      to,
+      subject: `Authorize your YouTube channel "${channelTitle}" on Bainsla Music CMS`,
+      html,
+    });
+    if (result.success) sent.push(to);
+    else failed.push({ email: to, error: result.error || "Send failed" });
+  }
+
+  if (sent.length === 0) {
+    return Response.json(
+      { error: failed[0]?.error || "Email could not be sent", data: { sent, failed } },
+      { status: 502 }
+    );
+  }
+
+  console.log(
+    `[sendInviteEmail] ${session.user.email} invited ${sent.join(", ")} for channel ${oauthState.channelId}`
+  );
+
+  return Response.json({ data: { sent, failed } });
 }

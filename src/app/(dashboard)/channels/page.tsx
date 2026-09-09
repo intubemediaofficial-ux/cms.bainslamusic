@@ -670,12 +670,43 @@ export default function ChannelsPage() {
     const emails = inviteEmails.split(/[,;\s]+/).filter((e) => e.includes("@"));
     if (emails.length === 0) return;
 
+    let state = "";
+    try {
+      state = new URL(inviteOAuthUrl).searchParams.get("state") || "";
+    } catch {
+      state = "";
+    }
+    if (!state) {
+      setInviteError("Generate the authorization link first");
+      return;
+    }
+
     setInviteSending(true);
-    // For now, copy the link to clipboard and show a message
-    // Email sending requires a backend email service (SendGrid, etc.)
-    await navigator.clipboard.writeText(inviteOAuthUrl);
-    setInviteSentMessage(`Link copied! Please share it manually with: ${emails.join(", ")}`);
-    setInviteSending(false);
+    setInviteSentMessage("");
+    setInviteError("");
+    try {
+      const res = await fetch("/api/channel-tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sendInviteEmail", state, emails }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Email could not be sent");
+      }
+      const sent: string[] = json.data?.sent || [];
+      const failed: { email: string; error: string }[] = json.data?.failed || [];
+      let message = `Invite sent to ${sent.join(", ")}`;
+      if (failed.length > 0) {
+        message += ` — failed: ${failed.map((f) => `${f.email} (${f.error})`).join(", ")}`;
+      }
+      setInviteSentMessage(message);
+      setInviteEmails("");
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : "Email could not be sent");
+    } finally {
+      setInviteSending(false);
+    }
   }, [inviteEmails, inviteOAuthUrl]);
 
   const handleAddChannel = useCallback(async () => {

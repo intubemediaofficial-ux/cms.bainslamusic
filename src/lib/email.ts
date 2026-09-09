@@ -133,3 +133,65 @@ export function getWelcomeEmailHtml(params: {
     </div>
   `;
 }
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export function getChannelInviteEmailHtml(params: {
+  channelTitle: string;
+  channelId: string;
+  authorizeUrl: string;
+  invitedBy: string;
+}): string {
+  const title = escapeHtml(params.channelTitle || params.channelId);
+  const channelId = escapeHtml(params.channelId);
+  const invitedBy = escapeHtml(params.invitedBy);
+  const url = escapeHtml(params.authorizeUrl);
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="display: inline-block; background: #dc2626; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px;">
+          <span style="color: #fff; font-size: 18px; font-weight: bold;">Bainsla Music</span>
+        </div>
+        <p style="color: #666; font-size: 14px; margin: 4px 0 0;">Channel Management System</p>
+      </div>
+
+      <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin-bottom: 20px;">
+        <h2 style="color: #1a1a1a; margin: 0 0 8px; font-size: 20px;">YouTube channel authorization request</h2>
+        <p style="color: #666; font-size: 14px; margin: 0 0 16px;">
+          <strong>${invitedBy}</strong> has asked you to connect your YouTube channel to Bainsla Music CMS.
+        </p>
+
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="color: #999; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px;">Channel</p>
+          <p style="color: #1a1a1a; font-size: 15px; font-weight: 600; margin: 0;">${title}</p>
+          <p style="color: #666; font-size: 12px; font-family: monospace; margin: 4px 0 0;">${channelId}</p>
+        </div>
+
+        <div style="text-align: center; margin: 24px 0 16px;">
+          <a href="${url}" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 12px 28px; border-radius: 8px;">Review &amp; Authorize Channel</a>
+        </div>
+
+        <p style="color: #666; font-size: 13px; margin: 0 0 8px;">
+          The link opens Bainsla Music's authorization disclosure first. You will confirm channel ownership, review the requested permissions, and then sign in on <strong>accounts.google.com</strong>. Bainsla Music never sees your Google or YouTube password.
+        </p>
+        <p style="color: #999; font-size: 12px; margin: 0;">
+          This link expires in 15 minutes and works only for the channel above. If you did not expect this email, you can ignore it.
+        </p>
+        <p style="color: #999; font-size: 11px; word-break: break-all; margin: 12px 0 0;">
+          If the button does not work, copy this link: <a href="${url}" style="color: #dc2626;">${url}</a>
+        </p>
+      </div>
+
+      <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
+        Bainsla Music CMS &middot; <a href="https://cms.bainslamusic.com/privacy-policy" style="color: #999;">Privacy Policy</a>
+      </p>
+    </div>
+  `;
+}
