@@ -552,6 +552,70 @@ export async function PUT(request: Request) {
       });
     }
 
+    // Bulk-approve pending channels in a single read-modify-write
+    if (body.type === "approve_channels") {
+      if (!admin && !isComp) {
+        return Response.json({ error: "Unauthorized" }, { status: 403 });
+      }
+      const items = Array.isArray(body.items)
+        ? (body.items as Array<{ userId?: unknown; channelId?: unknown }>).filter(
+            (it): it is { userId: string; channelId: string } =>
+              typeof it?.userId === "string" && typeof it?.channelId === "string"
+          )
+        : [];
+      if (items.length === 0) {
+        return Response.json({ error: "items[] with userId and channelId required" }, { status: 400 });
+      }
+      const users = await getUsers();
+      const approved: string[] = [];
+      const skipped: { channelId: string; reason: string }[] = [];
+      for (const { userId, channelId } of items) {
+        const userIdx = users.findIndex((u) => u.id === userId);
+        if (userIdx === -1) {
+          skipped.push({ channelId, reason: "User not found" });
+          continue;
+        }
+        if (isComp && companyUser && users[userIdx].parentId !== companyUser.id) {
+          skipped.push({ channelId, reason: "Not your client" });
+          continue;
+        }
+        if (!(users[userIdx].pendingChannels || []).includes(channelId)) {
+          skipped.push({ channelId, reason: "Not pending" });
+          continue;
+        }
+        const channelOwner = users.find(
+          (user) =>
+            user.id !== users[userIdx].id &&
+            ([...(user.channels || []), ...(user.pendingChannels || [])]).includes(channelId)
+        );
+        if (channelOwner) {
+          skipped.push({ channelId, reason: "Already assigned to another account" });
+          continue;
+        }
+        users[userIdx].pendingChannels = (users[userIdx].pendingChannels || []).filter((c) => c !== channelId);
+        if (!users[userIdx].channels.includes(channelId)) {
+          users[userIdx].channels.push(channelId);
+        }
+        users[userIdx].channelAddedDates ||= {};
+        users[userIdx].channelAddedDates[channelId] ||= currentChannelDate();
+        approved.push(channelId);
+      }
+      if (approved.length > 0) {
+        const saved = await saveUsers(users);
+        if (!saved) return Response.json({ error: "Failed to update" }, { status: 500 });
+        const session = await getServerSession(authOptions);
+        addAuditLog({
+          action: "channel_approve_channels",
+          performedBy: session?.user?.email || "unknown",
+          performedByRole: admin ? "admin" : "company",
+          targetUser: `${approved.length} channels`,
+          targetEmail: "",
+          details: `Bulk approved channels: ${approved.join(", ")}`,
+        }).catch(() => {});
+      }
+      return Response.json({ data: { approved, skipped } });
+    }
+
     // Approve, reject, or unapprove a channel
     if (body.type === "approve_channel" || body.type === "reject_channel" || body.type === "unapprove_channel") {
       const { userId, channelId } = body;
