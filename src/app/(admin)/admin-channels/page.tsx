@@ -128,6 +128,9 @@ export default function AdminChannelsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [pendingActionLoading, setPendingActionLoading] = useState<string | null>(null);
+  const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkApproveMessage, setBulkApproveMessage] = useState<string | null>(null);
   const [validatingChannelId, setValidatingChannelId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [revenuePeriod, setRevenuePeriod] = useState<string>("cached");
@@ -685,6 +688,72 @@ export default function AdminChannelsPage() {
     setPendingActionLoading(null);
   };
 
+  const pendingKey = (item: { clientId: string; channelId: string }) => `${item.clientId}:${item.channelId}`;
+  const selectedPendingItems = pendingChannelsList.filter((item) => selectedPending.has(pendingKey(item)));
+  const allPendingSelected = pendingChannelsList.length > 0 && selectedPendingItems.length === pendingChannelsList.length;
+
+  const handleApproveSelected = async () => {
+    if (selectedPendingItems.length === 0 || bulkApproving) return;
+    setBulkApproving(true);
+    setBulkApproveMessage(null);
+    try {
+      const res = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "approve_channels",
+          items: selectedPendingItems.map((item) => ({ userId: item.clientId, channelId: item.channelId })),
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        data?: { approved?: string[]; skipped?: { channelId: string; reason: string }[] };
+        error?: string;
+      };
+      if (!res.ok) {
+        setBulkApproveMessage(json.error || "Bulk approve failed");
+        return;
+      }
+      const approvedIds = new Set(json.data?.approved ?? []);
+      const skipped = json.data?.skipped ?? [];
+      for (const item of selectedPendingItems) {
+        if (!approvedIds.has(item.channelId)) continue;
+        const client = clients.find((c) => c.id === item.clientId);
+        if (client) {
+          fetch("/api/notifications", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: client.id,
+              userEmail: client.email,
+              type: "channel_approved",
+              title: "Channel Approved!",
+              message: `Your channel ${item.channelId} has been approved. Please validate your token now — go to Channels page, copy the invite link, and validate to start seeing data.`,
+            }),
+          }).catch(() => {});
+        }
+      }
+      setClients((prev) => prev.map((c) => {
+        const mine = selectedPendingItems.filter((item) => item.clientId === c.id && approvedIds.has(item.channelId)).map((item) => item.channelId);
+        if (mine.length === 0) return c;
+        return {
+          ...c,
+          channels: [...c.channels, ...mine.filter((id) => !c.channels.includes(id))],
+          pendingChannels: (c.pendingChannels || []).filter((ch) => !mine.includes(ch)),
+        };
+      }));
+      setBulkApproveMessage(
+        skipped.length
+          ? `Approved ${approvedIds.size}, skipped ${skipped.length}: ${skipped.map((s) => `${s.channelId} (${s.reason})`).join(", ")}`
+          : `Approved ${approvedIds.size} channel${approvedIds.size === 1 ? "" : "s"}`
+      );
+      setSelectedPending(new Set());
+    } catch {
+      setBulkApproveMessage("Network error — could not reach the server.");
+    } finally {
+      setBulkApproving(false);
+    }
+  };
+
   const handleRejectChannel = async (userId: string, channelId: string) => {
     setPendingActionLoading(channelId);
     try {
@@ -829,14 +898,53 @@ export default function AdminChannelsPage() {
       {/* Pending Channels Approval Section */}
       {pendingChannelsList.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-5 h-5 text-amber-600" />
-            <h2 className="text-lg font-bold text-amber-900">Pending Channel Approvals ({pendingChannelsList.length})</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-600" />
+              <h2 className="text-lg font-bold text-amber-900">Pending Channel Approvals ({pendingChannelsList.length})</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 text-xs text-amber-800 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-green-600"
+                  checked={allPendingSelected}
+                  onChange={() =>
+                    setSelectedPending(allPendingSelected ? new Set() : new Set(pendingChannelsList.map(pendingKey)))
+                  }
+                />
+                Select all
+              </label>
+              <button
+                onClick={handleApproveSelected}
+                disabled={selectedPendingItems.length === 0 || bulkApproving}
+                className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkApproving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                Approve selected ({selectedPendingItems.length})
+              </button>
+            </div>
           </div>
+          {bulkApproveMessage && <p className="text-xs text-amber-800 mb-3">{bulkApproveMessage}</p>}
           <div className="space-y-3">
             {pendingChannelsList.map((item) => (
-              <div key={`${item.clientId}-${item.channelId}`} className="bg-white rounded-lg border border-amber-200 p-4 flex items-center justify-between">
-                <div>
+              <div key={`${item.clientId}-${item.channelId}`} className="bg-white rounded-lg border border-amber-200 p-4 flex items-center justify-between gap-3">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-green-600 shrink-0"
+                  checked={selectedPending.has(pendingKey(item))}
+                  onChange={() =>
+                    setSelectedPending((prev) => {
+                      const next = new Set(prev);
+                      const key = pendingKey(item);
+                      if (next.has(key)) next.delete(key);
+                      else next.add(key);
+                      return next;
+                    })
+                  }
+                  aria-label={`Select ${item.channelId}`}
+                />
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{item.channelId}</p>
                   <p className="text-xs text-muted">Client: <span className="font-medium">{item.clientName}</span> ({item.clientEmail})</p>
                 </div>

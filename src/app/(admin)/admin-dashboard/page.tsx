@@ -217,6 +217,9 @@ export default function AdminDashboardPage() {
   const [realtimeEnabled, setRealtimeEnabled] = useState<boolean | null>(null);
   const [realtimeChannel, setRealtimeChannel] = useState<string>("all");
   const [realtimeUserSettings, setRealtimeUserSettings] = useState<Record<string, boolean>>({});
+  const [selectedPendingChannels, setSelectedPendingChannels] = useState<Set<string>>(new Set());
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkApproveMessage, setBulkApproveMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role !== "admin") {
@@ -1330,6 +1333,51 @@ export default function AdminDashboardPage() {
           }
         }
         if (pendingUsers.length === 0 && pendingChannelsList.length === 0) return null;
+        const pendingKey = (pc: { userId: string; channelId: string }) => `${pc.userId}:${pc.channelId}`;
+        const selectedItems = pendingChannelsList.filter((pc) => selectedPendingChannels.has(pendingKey(pc)));
+        const allSelected = pendingChannelsList.length > 0 && selectedItems.length === pendingChannelsList.length;
+        const toggleSelected = (key: string) => {
+          setSelectedPendingChannels((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+          });
+        };
+        const approveSelected = async () => {
+          if (selectedItems.length === 0 || bulkApproving) return;
+          setBulkApproving(true);
+          setBulkApproveMessage(null);
+          try {
+            const res = await fetch("/api/users", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "approve_channels",
+                items: selectedItems.map((pc) => ({ userId: pc.userId, channelId: pc.channelId })),
+              }),
+            });
+            const json = (await res.json().catch(() => ({}))) as {
+              data?: { approved?: string[]; skipped?: { channelId: string; reason: string }[] };
+              error?: string;
+            };
+            if (!res.ok) {
+              setBulkApproveMessage(json.error || "Bulk approve failed");
+              return;
+            }
+            const approved = json.data?.approved?.length ?? 0;
+            const skipped = json.data?.skipped ?? [];
+            setBulkApproveMessage(
+              skipped.length
+                ? `Approved ${approved}, skipped ${skipped.length}: ${skipped.map((s) => `${s.channelId} (${s.reason})`).join(", ")}`
+                : `Approved ${approved} channel${approved === 1 ? "" : "s"}`
+            );
+            setSelectedPendingChannels(new Set());
+            fetchClients();
+          } finally {
+            setBulkApproving(false);
+          }
+        };
         return (
           <div className="bg-white rounded-xl border border-amber-200 overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-amber-100 bg-amber-50">
@@ -1379,11 +1427,46 @@ export default function AdminDashboardPage() {
               )}
               {pendingChannelsList.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Channels Waiting Approval</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Channels Waiting Approval</p>
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1.5 text-xs text-amber-800 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 accent-green-600"
+                          checked={allSelected}
+                          onChange={() =>
+                            setSelectedPendingChannels(
+                              allSelected ? new Set() : new Set(pendingChannelsList.map(pendingKey))
+                            )
+                          }
+                        />
+                        Select all ({pendingChannelsList.length})
+                      </label>
+                      <button
+                        onClick={approveSelected}
+                        disabled={selectedItems.length === 0 || bulkApproving}
+                        className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {bulkApproving ? "Approving…" : `Approve selected (${selectedItems.length})`}
+                      </button>
+                    </div>
+                  </div>
+                  {bulkApproveMessage && (
+                    <p className="text-xs text-amber-800 mb-2">{bulkApproveMessage}</p>
+                  )}
                   {pendingChannelsList.map((pc) => {
                     const cached = cachedChannelMap[pc.channelId];
+                    const key = pendingKey(pc);
                     return (
-                      <div key={`${pc.userId}-${pc.channelId}`} className="flex items-center gap-3 p-3 bg-amber-50/50 rounded-lg border border-amber-100 mb-2">
+                      <div key={key} className="flex items-center gap-3 p-3 bg-amber-50/50 rounded-lg border border-amber-100 mb-2">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 accent-green-600 shrink-0"
+                          checked={selectedPendingChannels.has(key)}
+                          onChange={() => toggleSelected(key)}
+                          aria-label={`Select ${cached?.channelTitle || pc.channelId}`}
+                        />
                         {cached?.thumbnail ? (
                           <img src={cached.thumbnail} alt="" className="w-8 h-8 rounded-full shrink-0" />
                         ) : (
