@@ -448,7 +448,7 @@ export default function AdminChannelsPage() {
       setPeriodRevenueLoading(true);
       void (async () => {
         try {
-          const monthlyQuery = revenuePeriod.match(/^\d{4}-\d{2}$/) ? `&monthly=${revenuePeriod}` : "";
+          const monthlyQuery = revenuePeriod.match(/^\d{4}-\d{2}$/) ? `&monthly=${revenuePeriod}` : "&rangeCache=true";
           const res = await fetch(`/api/youtube?action=dashboardFull&channelIds=${encodeURIComponent(allIds.join(","))}&startDate=${startDate}&endDate=${endDate}${monthlyQuery}`);
           if (res.ok) {
             const json = await res.json();
