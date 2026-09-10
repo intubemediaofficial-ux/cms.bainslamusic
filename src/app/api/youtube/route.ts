@@ -13,7 +13,7 @@ import {
   getRevenueData,
   lookupChannel,
 } from "@/lib/youtube";
-import { getValidAccessToken, getTokenStatus, getAnyValidAccessToken } from "@/lib/channel-tokens";
+import { getValidAccessToken, getAnyValidAccessToken } from "@/lib/channel-tokens";
 import { getAllCachedClientData } from "@/lib/client-data-cache";
 import { getMonthlyChannelAnalytics, isValidMonth } from "@/lib/monthly-channel-analytics";
 import {
@@ -27,6 +27,123 @@ import {
 } from "@/lib/youtube-cache";
 
 export const dynamic = "force-dynamic";
+
+const CHANNEL_CONCURRENCY = 6;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+async function resolveChannelTokens(channelIds: string[]): Promise<{
+  tokens: Record<string, string>;
+  errors: Record<string, string>;
+}> {
+  const tokens: Record<string, string> = {};
+  const errors: Record<string, string> = {};
+  const resolved = await mapWithConcurrency(channelIds, CHANNEL_CONCURRENCY, async (cid) => {
+    try {
+      return [cid, await getValidAccessToken(cid)] as const;
+    } catch (err) {
+      errors[cid] = err instanceof Error ? err.message : String(err);
+      return [cid, null] as const;
+    }
+  });
+  for (const [cid, token] of resolved) {
+    if (token) tokens[cid] = token;
+    else if (!errors[cid]) errors[cid] = "Token status=none";
+  }
+  return { tokens, errors };
+}
+
+const REALTIME_FRESH_MS = 10 * 60 * 1000;
+const REALTIME_TTL_SEC = 6 * 60 * 60;
+
+type AnalyticsTable = { rows?: unknown[][]; columnHeaders?: Array<{ name?: string | null }> } | null;
+
+interface Realtime48Data {
+  views: number;
+  subscribers: number;
+  watchTime: number;
+  revenue: number;
+  dailyBreakdown: Array<{ date: string; views: number; subscribers: number; watchTime: number; revenue: number }>;
+  period: { start: string; end: string };
+}
+
+// Last 3 days (YouTube analytics lag ~2 days), summed across the channels' own tokens.
+async function computeRealtime48(channelIds: string[]): Promise<Realtime48Data> {
+  const now = new Date();
+  const day1 = new Date(now); day1.setDate(now.getDate() - 1);
+  const day3 = new Date(now); day3.setDate(now.getDate() - 3);
+  const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+  const start = fmt(day3);
+  const end = fmt(day1);
+
+  const { tokens } = await resolveChannelTokens(channelIds);
+  const perChannel = await mapWithConcurrency(Object.entries(tokens), CHANNEL_CONCURRENCY, async ([cid, token]) => {
+    try {
+      return await Promise.all([
+        getAnalyticsData(token, start, end, "views,estimatedMinutesWatched,subscribersGained", "day", cid).catch(() => null) as Promise<AnalyticsTable>,
+        getAnalyticsData(token, start, end, "estimatedRevenue", "day", cid).catch(() => null) as Promise<AnalyticsTable>,
+      ]);
+    } catch (err) {
+      console.warn(`[realtime48] ${cid} error:`, err instanceof Error ? err.message : err);
+      return [null, null] as [AnalyticsTable, AnalyticsTable];
+    }
+  });
+
+  const totals = { views: 0, subscribers: 0, watchTime: 0, revenue: 0 };
+  const dailyMap = new Map<string, { views: number; subscribers: number; watchTime: number; revenue: number }>();
+  const dayEntry = (day: string) => {
+    const existing = dailyMap.get(day) || { views: 0, subscribers: 0, watchTime: 0, revenue: 0 };
+    dailyMap.set(day, existing);
+    return existing;
+  };
+  for (const [perf, rev] of perChannel) {
+    if (perf?.rows?.length && perf.columnHeaders) {
+      const headers = perf.columnHeaders.map((h) => h.name || "");
+      const dayIdx = headers.indexOf("day");
+      const viewsIdx = headers.indexOf("views");
+      const watchIdx = headers.indexOf("estimatedMinutesWatched");
+      const subsIdx = headers.indexOf("subscribersGained");
+      for (const row of perf.rows) {
+        const entry = dayEntry(String(row[dayIdx] || ""));
+        const views = Number(row[viewsIdx] || 0);
+        const watch = Number(row[watchIdx] || 0);
+        const subs = Number(row[subsIdx] || 0);
+        totals.views += views; totals.watchTime += watch; totals.subscribers += subs;
+        entry.views += views; entry.watchTime += watch; entry.subscribers += subs;
+      }
+    }
+    if (rev?.rows?.length && rev.columnHeaders) {
+      const headers = rev.columnHeaders.map((h) => h.name || "");
+      const dayIdx = headers.indexOf("day");
+      const revIdx = headers.indexOf("estimatedRevenue");
+      for (const row of rev.rows) {
+        const entry = dayEntry(String(row[dayIdx] || ""));
+        const amount = Number(row[revIdx] || 0);
+        totals.revenue += amount;
+        entry.revenue += amount;
+      }
+    }
+  }
+  const dailyBreakdown = Array.from(dailyMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, data]) => ({ date, ...data }));
+  return { ...totals, dailyBreakdown, period: { start, end } };
+}
 
 const ADMIN_EMAILS = [
   "ajeetgurjarofficial@gmail.com",
@@ -599,12 +716,9 @@ export async function GET(request: Request) {
         // Login tokens lack YouTube scopes — always use per-channel tokens
         const hasAdminToken = false;
 
-        // Use per-channel tokens for channel data lookup
-        let channelLookupToken: string | undefined = undefined;
-        for (const cid of channelIds) {
-          const t = await getValidAccessToken(cid);
-          if (t) { channelLookupToken = t; break; }
-        }
+        // Resolve every channel's token once, in parallel — reused for lookup and analytics
+        const { tokens: channelTokenMap, errors: channelTokenErrors } = await resolveChannelTokens(channelIds);
+        const channelLookupToken: string | undefined = Object.values(channelTokenMap)[0];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let channelsPromise: Promise<any[]>;
         if (channelIds.length > 0 && channelLookupToken) {
@@ -626,22 +740,6 @@ export async function GET(request: Request) {
         yesterday.setDate(yesterday.getDate() - 2); // YouTube data is ~2 days delayed
         const lastDayDate = yesterday.toISOString().split("T")[0];
 
-        // Collect per-channel tokens for channels that have valid OAuth tokens
-        const channelTokenMap: Record<string, string> = {};
-        const channelTokenErrors: Record<string, string> = {};
-        for (const cid of channelIds) {
-          const tokenStatus = await getTokenStatus(cid);
-          if (tokenStatus === "valid" || tokenStatus === "expired") {
-            const token = await getValidAccessToken(cid);
-            if (token) {
-              channelTokenMap[cid] = token;
-            } else {
-              channelTokenErrors[cid] = `Token status=${tokenStatus} but getValidAccessToken returned null`;
-            }
-          } else {
-            channelTokenErrors[cid] = `Token status=${tokenStatus}`;
-          }
-        }
         console.log(`[dashboardFull] channelIds=${channelIds.length}, tokenized=${Object.keys(channelTokenMap).length}, errors=${JSON.stringify(channelTokenErrors)}`);
         const tokenizedChannelIds = Object.keys(channelTokenMap);
         const hasAnyToken = hasOwnChannel || tokenizedChannelIds.length > 0;
@@ -700,8 +798,10 @@ export async function GET(request: Request) {
         const allVideoIds: string[] = [];
 
         const perChannelErrors: Record<string, string> = {};
-        for (const [cid, token] of Object.entries(channelTokenMap)) {
-          // Process all tokenized channels
+        const channelResults = await mapWithConcurrency(
+          Object.entries(channelTokenMap),
+          CHANNEL_CONCURRENCY,
+          async ([cid, token]) => {
           try {
             const [perf, prevPerf, rev, prevRev, daily, revViews, videoAnalytics] = await Promise.all([
               getAnalyticsData(token, startDate, endDate, performanceMetrics, "", cid).catch((e) => { console.error(`[dashboardFull] ${cid} perf error:`, e?.message || e); return null; }),
@@ -712,33 +812,43 @@ export async function GET(request: Request) {
               getAnalyticsData(token, startDate, endDate, "estimatedRevenue,views", "", cid).catch(() => null),
               getAnalyticsData(token, startDate, endDate, "views,likes,subscribersGained,estimatedRevenue", "video", cid).catch(() => null),
             ]);
-            perChannelAnalytics[cid] = {
-              performance: perf as Record<string, unknown> | null,
-              prevPerformance: prevPerf as Record<string, unknown> | null,
-              revenue: rev as Record<string, unknown> | null,
-              prevRevenue: prevRev as Record<string, unknown> | null,
-              dailyRevenue: daily as Record<string, unknown> | null,
-              revenueViews: revViews as Record<string, unknown> | null,
-            };
-            // Collect video analytics rows
             const va = videoAnalytics as { rows?: unknown[][]; columnHeaders?: Array<{ name?: string | null }> } | null;
-            if (va?.rows?.length && va.columnHeaders) {
-              if (allVideoAnalyticsHeaders.length === 0) {
-                allVideoAnalyticsHeaders.push(...va.columnHeaders);
-              }
-              allVideoAnalyticsRows.push(...va.rows);
-              const vidIdx = va.columnHeaders.findIndex((h) => h.name === "video");
-              if (vidIdx !== -1) {
-                for (const row of va.rows) {
-                  allVideoIds.push(String(row[vidIdx]));
-                }
-              }
-            }
             console.log(`[dashboardFull] ${cid}: perf=${!!perf}, rev=${!!rev}, revViews=${!!revViews}, videos=${va?.rows?.length || 0}`);
+            return {
+              cid,
+              analytics: {
+                performance: perf as Record<string, unknown> | null,
+                prevPerformance: prevPerf as Record<string, unknown> | null,
+                revenue: rev as Record<string, unknown> | null,
+                prevRevenue: prevRev as Record<string, unknown> | null,
+                dailyRevenue: daily as Record<string, unknown> | null,
+                revenueViews: revViews as Record<string, unknown> | null,
+              },
+              va,
+            };
           } catch (err) {
             const errMsg = err instanceof Error ? err.message : String(err);
             console.error(`[dashboardFull] ${cid} analytics failed:`, errMsg);
             perChannelErrors[cid] = errMsg;
+            return null;
+          }
+          }
+        );
+        for (const result of channelResults) {
+          if (!result) continue;
+          perChannelAnalytics[result.cid] = result.analytics;
+          const va = result.va;
+          if (va?.rows?.length && va.columnHeaders) {
+            if (allVideoAnalyticsHeaders.length === 0) {
+              allVideoAnalyticsHeaders.push(...va.columnHeaders);
+            }
+            allVideoAnalyticsRows.push(...va.rows);
+            const vidIdx = va.columnHeaders.findIndex((h) => h.name === "video");
+            if (vidIdx !== -1) {
+              for (const row of va.rows) {
+                allVideoIds.push(String(row[vidIdx]));
+              }
+            }
           }
         }
 
@@ -884,86 +994,22 @@ export async function GET(request: Request) {
           return Response.json({ data: { disabled: true, message: "Realtime view is disabled by admin" } });
         }
 
-        const now = new Date();
-        const day1 = new Date(now); day1.setDate(now.getDate() - 1);
-        const day2 = new Date(now); day2.setDate(now.getDate() - 2);
-        const day3 = new Date(now); day3.setDate(now.getDate() - 3);
-        const realtimeStart = `${day3.getUTCFullYear()}-${String(day3.getUTCMonth()+1).padStart(2,"0")}-${String(day3.getUTCDate()).padStart(2,"0")}`;
-        const realtimeEnd = `${day1.getUTCFullYear()}-${String(day1.getUTCMonth()+1).padStart(2,"0")}-${String(day1.getUTCDate()).padStart(2,"0")}`;
-
-        let totalViews48 = 0;
-        let totalSubs48 = 0;
-        let totalWatchTime48 = 0;
-        let totalRevenue48 = 0;
-        const dailyBreakdown: Array<{ date: string; views: number; subscribers: number; watchTime: number; revenue: number }> = [];
-        const dailyMap = new Map<string, { views: number; subscribers: number; watchTime: number; revenue: number }>();
-
-        for (const cid of channelIds48) {
-          const token48 = await getValidAccessToken(cid);
-          if (!token48) continue;
-          try {
-            const [perfData, revData] = await Promise.all([
-              getAnalyticsData(token48, realtimeStart, realtimeEnd, "views,estimatedMinutesWatched,subscribersGained", "day", cid).catch(() => null),
-              getAnalyticsData(token48, realtimeStart, realtimeEnd, "estimatedRevenue", "day", cid).catch(() => null),
-            ]);
-            // Process performance data
-            const perf = perfData as { rows?: unknown[][]; columnHeaders?: Array<{ name?: string | null }> } | null;
-            if (perf?.rows?.length && perf.columnHeaders) {
-              const headers = perf.columnHeaders.map(h => h.name || "");
-              const dayIdx = headers.indexOf("day");
-              const viewsIdx = headers.indexOf("views");
-              const watchIdx = headers.indexOf("estimatedMinutesWatched");
-              const subsIdx = headers.indexOf("subscribersGained");
-              for (const row of perf.rows) {
-                const dayStr = String(row[dayIdx] || "");
-                const views = Number(row[viewsIdx] || 0);
-                const watch = Number(row[watchIdx] || 0);
-                const subs = Number(row[subsIdx] || 0);
-                totalViews48 += views;
-                totalWatchTime48 += watch;
-                totalSubs48 += subs;
-                const existing = dailyMap.get(dayStr) || { views: 0, subscribers: 0, watchTime: 0, revenue: 0 };
-                existing.views += views;
-                existing.watchTime += watch;
-                existing.subscribers += subs;
-                dailyMap.set(dayStr, existing);
-              }
-            }
-            // Process revenue data
-            const rev48 = revData as { rows?: unknown[][]; columnHeaders?: Array<{ name?: string | null }> } | null;
-            if (rev48?.rows?.length && rev48.columnHeaders) {
-              const headers = rev48.columnHeaders.map(h => h.name || "");
-              const dayIdx = headers.indexOf("day");
-              const revIdx = headers.indexOf("estimatedRevenue");
-              for (const row of rev48.rows) {
-                const dayStr = String(row[dayIdx] || "");
-                const rev = Number(row[revIdx] || 0);
-                totalRevenue48 += rev;
-                const existing = dailyMap.get(dayStr) || { views: 0, subscribers: 0, watchTime: 0, revenue: 0 };
-                existing.revenue += rev;
-                dailyMap.set(dayStr, existing);
-              }
-            }
-          } catch (err48) {
-            console.warn(`[realtime48] ${cid} error:`, err48 instanceof Error ? err48.message : err48);
-          }
+        const realtimeKey = `yt_cache:realtime48:${[...channelIds48].sort().join(",")}`;
+        const cached48 = await kv.get<{ data: unknown; lastUpdated: string }>(realtimeKey).catch(() => null);
+        const cachedAge48 = cached48 ? Date.now() - Date.parse(cached48.lastUpdated) : Infinity;
+        if (cached48 && cachedAge48 < REALTIME_FRESH_MS) {
+          return Response.json({ data: cached48.data, _cached: true, _lastUpdated: cached48.lastUpdated });
         }
-
-        // Sort daily breakdown by date
-        for (const [date, data] of Array.from(dailyMap.entries()).sort()) {
-          dailyBreakdown.push({ date, ...data });
+        if (cached48) {
+          // Stale: answer instantly and refresh in the background
+          void computeRealtime48(channelIds48).then((fresh) =>
+            kv.set(realtimeKey, { data: fresh, lastUpdated: new Date().toISOString() }, { ex: REALTIME_TTL_SEC })
+          ).catch((err) => console.warn("[realtime48] background refresh failed:", err instanceof Error ? err.message : err));
+          return Response.json({ data: cached48.data, _cached: true, _stale: true, _lastUpdated: cached48.lastUpdated });
         }
-
-        return Response.json({
-          data: {
-            views: totalViews48,
-            subscribers: totalSubs48,
-            watchTime: totalWatchTime48,
-            revenue: totalRevenue48,
-            dailyBreakdown,
-            period: { start: realtimeStart, end: realtimeEnd },
-          }
-        });
+        const fresh48 = await computeRealtime48(channelIds48);
+        void kv.set(realtimeKey, { data: fresh48, lastUpdated: new Date().toISOString() }, { ex: REALTIME_TTL_SEC }).catch(() => {});
+        return Response.json({ data: fresh48 });
       }
       default:
         return Response.json({ error: "Invalid action" }, { status: 400 });

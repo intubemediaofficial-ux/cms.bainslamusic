@@ -187,17 +187,19 @@ export async function GET(request: Request) {
       }
 
       const statuses: Record<string, { status: string; channelTitle?: string; updatedAt?: string; channelMismatch?: boolean; googleChannelId?: string }> = {};
-      for (const id of channelIds) {
-        const status = await getTokenStatus(id);
-        const token = await getChannelToken(id);
-        statuses[id] = {
-          status,
-          channelTitle: token?.channelTitle || undefined,
-          updatedAt: token?.updatedAt || undefined,
-          channelMismatch: !!(token?.googleChannelId && token.googleChannelId !== id),
-          googleChannelId: token?.googleChannelId || undefined,
-        };
-      }
+      const entries = await Promise.all(
+        channelIds.map(async (id) => {
+          const [status, token] = await Promise.all([getTokenStatus(id), getChannelToken(id)]);
+          return [id, {
+            status,
+            channelTitle: token?.channelTitle || undefined,
+            updatedAt: token?.updatedAt || undefined,
+            channelMismatch: !!(token?.googleChannelId && token.googleChannelId !== id),
+            googleChannelId: token?.googleChannelId || undefined,
+          }] as const;
+        })
+      );
+      for (const [id, entry] of entries) statuses[id] = entry;
 
       return Response.json({ data: { statuses, kvConfigured: isKVConfigured() } });
     }
