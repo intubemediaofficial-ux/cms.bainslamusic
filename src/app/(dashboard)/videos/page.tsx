@@ -195,7 +195,8 @@ export default function VideosPage() {
   const [editVideo, setEditVideo] = useState<VideoItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
-  const [editTags, setEditTags] = useState("");
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [editPrivacy, setEditPrivacy] = useState("public");
   const [editSaving, setEditSaving] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -486,6 +487,31 @@ export default function VideosPage() {
 
   const isLoading = loading;
 
+  const TAGS_MAX_CHARS = 500;
+  const tagsCharCount = (tags: string[]) =>
+    tags.reduce((sum, tag) => sum + tag.length + (tag.includes(" ") ? 2 : 0), 0) + Math.max(0, tags.length - 1);
+  const splitTags = (raw: string) =>
+    raw.split(/[,\n]/).map((t) => t.trim()).filter(Boolean);
+
+  const addTags = (raw: string) => {
+    const incoming = splitTags(raw);
+    if (!incoming.length) return;
+    setEditTags((prev) => {
+      const next = [...prev];
+      for (const tag of incoming) {
+        if (next.some((t) => t.toLowerCase() === tag.toLowerCase())) continue;
+        if (tagsCharCount([...next, tag]) > TAGS_MAX_CHARS) break;
+        next.push(tag);
+      }
+      return next;
+    });
+    setTagInput("");
+  };
+
+  const removeTag = (index: number) => {
+    setEditTags((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const clearEditThumb = () => {
     if (editThumbPreview) URL.revokeObjectURL(editThumbPreview);
     setEditThumbFile(null);
@@ -525,7 +551,8 @@ export default function VideosPage() {
     setEditVideo(video);
     setEditTitle(video.snippet?.title || "");
     setEditDesc(video.snippet?.description || "");
-    setEditTags((video.snippet?.tags || []).join(", "));
+    setEditTags(video.snippet?.tags || []);
+    setTagInput("");
     setEditPrivacy(video.status?.privacyStatus || "public");
     setEditError("");
     clearEditThumb();
@@ -542,7 +569,7 @@ export default function VideosPage() {
       }
       setEditTitle(data.data.title || "");
       setEditDesc(data.data.description || "");
-      setEditTags((data.data.tags || []).join(", "));
+      setEditTags(data.data.tags || []);
       setEditPrivacy(data.data.privacyStatus || "public");
     } catch {
       setEditError("Could not load the latest video details. Saving may overwrite the description or tags.");
@@ -556,7 +583,7 @@ export default function VideosPage() {
     setEditSaving(true);
     setEditError("");
     try {
-      const tagsArray = editTags.split(",").map((t) => t.trim()).filter(Boolean);
+      const tagsArray = [...editTags, ...splitTags(tagInput)];
       const res = await fetch("/api/youtube/video", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -1429,49 +1456,152 @@ export default function VideosPage() {
 
       {/* Edit Video — full-page editor */}
       {editVideo && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white">
-            <div className="min-w-0">
-              <h2 className="text-xl font-semibold text-foreground truncate">Edit Video</h2>
-              <p className="text-xs text-muted truncate">
-                {editVideo.snippet?.channelTitle || editVideo.snippet?.channelId} · youtu.be/{editVideo.id}
-              </p>
+        <div className="fixed inset-0 bg-slate-50 z-50 flex flex-col">
+          <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-white shadow-sm">
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={closeEdit} className="p-2 hover:bg-slate-100 rounded-lg shrink-0" title="Close">
+                <X className="w-5 h-5 text-muted" />
+              </button>
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-foreground truncate">Video details</h2>
+                <p className="text-xs text-muted truncate">
+                  {editVideo.snippet?.channelTitle || editVideo.snippet?.channelId} · youtu.be/{editVideo.id}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              {editLoading && (
+                <span className="hidden sm:flex items-center gap-1.5 text-xs text-muted mr-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Syncing from YouTube…
+                </span>
+              )}
               <button
                 onClick={closeEdit}
-                className="px-4 py-2 text-sm text-muted hover:bg-slate-100 rounded-lg"
+                className="px-4 py-2 text-sm font-medium text-foreground hover:bg-slate-100 rounded-lg"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEditSave}
                 disabled={editSaving || editLoading}
-                className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dark disabled:opacity-50 shadow-sm"
               >
                 {editSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {editThumbUploading ? "Uploading thumbnail…" : editSaving ? "Saving…" : "Save Changes"}
-              </button>
-              <button onClick={closeEdit} className="p-2 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-muted" />
+                {editThumbUploading ? "Uploading thumbnail…" : editSaving ? "Saving…" : "Save"}
               </button>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
             <div className="max-w-6xl mx-auto p-6 space-y-4">
               {editError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{editError}</div>
-              )}
-              {editLoading && (
-                <div className="flex items-center gap-2 text-sm text-muted">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Loading latest details from YouTube…
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {editError}
                 </div>
               )}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Thumbnail</label>
-                    <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-100 border border-border">
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="lg:col-span-3 space-y-5">
+                  <div className="bg-white rounded-xl border border-border p-5 space-y-5">
+                    <div className="relative">
+                      <label className="absolute -top-2 left-3 px-1 bg-white text-[11px] font-medium text-muted">
+                        Title (required)
+                      </label>
+                      <input
+                        type="text"
+                        value={editTitle}
+                        disabled={editLoading}
+                        maxLength={100}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="w-full px-4 py-3.5 border border-border rounded-lg text-base font-medium focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-slate-50"
+                      />
+                      <p className="text-[11px] text-muted mt-1 text-right">{editTitle.length}/100</p>
+                    </div>
+                    <div className="relative">
+                      <label className="absolute -top-2 left-3 px-1 bg-white text-[11px] font-medium text-muted">
+                        Description
+                      </label>
+                      <textarea
+                        value={editDesc}
+                        onChange={(e) => setEditDesc(e.target.value)}
+                        disabled={editLoading}
+                        maxLength={5000}
+                        rows={16}
+                        placeholder="Tell viewers about your video"
+                        className="w-full px-4 py-3.5 border border-border rounded-lg text-sm leading-relaxed focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-y min-h-[300px] disabled:bg-slate-50"
+                      />
+                      <p className="text-[11px] text-muted mt-1 text-right">{editDesc.length}/5000</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-border p-5">
+                    <h3 className="text-sm font-semibold text-foreground">Tags</h3>
+                    <p className="text-xs text-muted mt-0.5 mb-3">
+                      Tags can be useful if content in your video is commonly misspelled. Type a tag and press Enter or comma.
+                    </p>
+                    <div
+                      className={`flex flex-wrap items-center gap-2 p-2.5 border rounded-lg min-h-[52px] ${editLoading ? "bg-slate-50 border-border" : "bg-white border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"}`}
+                      onClick={(e) => (e.currentTarget.querySelector("input") as HTMLInputElement | null)?.focus()}
+                    >
+                      {editTags.map((tag, index) => (
+                        <span
+                          key={`${tag}-${index}`}
+                          className="inline-flex items-center gap-1 pl-3 pr-1.5 py-1 rounded-full bg-slate-100 text-sm text-foreground"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => removeTag(index)}
+                            disabled={editLoading}
+                            className="p-0.5 rounded-full hover:bg-slate-300 text-muted"
+                            aria-label={`Remove tag ${tag}`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                      <input
+                        type="text"
+                        value={tagInput}
+                        disabled={editLoading}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value.includes(",")) addTags(value);
+                          else setTagInput(value);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addTags(tagInput);
+                          } else if (e.key === "Backspace" && !tagInput && editTags.length) {
+                            removeTag(editTags.length - 1);
+                          }
+                        }}
+                        onBlur={() => addTags(tagInput)}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          addTags(e.clipboardData.getData("text"));
+                        }}
+                        placeholder={editTags.length ? "" : "Add tag"}
+                        className="flex-1 min-w-[140px] px-1 py-1 text-sm bg-transparent focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-[11px] text-muted">{editTags.length} tags</span>
+                      <span className={`text-[11px] ${tagsCharCount(editTags) > TAGS_MAX_CHARS - 20 ? "text-amber-600" : "text-muted"}`}>
+                        {tagsCharCount(editTags)}/{TAGS_MAX_CHARS}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2 space-y-5">
+                  <div className="bg-white rounded-xl border border-border p-5">
+                    <h3 className="text-sm font-semibold text-foreground">Thumbnail</h3>
+                    <p className="text-xs text-muted mt-0.5 mb-3">
+                      Select or upload a picture that shows what&apos;s in your video. 1280×720, JPG/PNG, up to 2 MB.
+                    </p>
+                    <label
+                      className={`group relative block aspect-video w-full rounded-xl overflow-hidden bg-slate-900 border border-border ${editLoading || editSaving ? "cursor-default" : "cursor-pointer"}`}
+                    >
                       {(editThumbPreview ||
                         editVideo.snippet?.thumbnails?.medium?.url ||
                         editVideo.snippet?.thumbnails?.default?.url) && (
@@ -1487,11 +1617,27 @@ export default function VideosPage() {
                           className="w-full h-full object-cover"
                         />
                       )}
-                    </div>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/0 group-hover:bg-black/50 text-white opacity-0 group-hover:opacity-100 transition">
+                        <Image className="w-6 h-6" />
+                        <span className="text-xs font-medium">{editThumbFile ? "Change thumbnail" : "Upload thumbnail"}</span>
+                      </div>
+                      {editThumbFile && (
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[11px] font-medium">
+                          New · uploads on Save
+                        </span>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        className="hidden"
+                        disabled={editLoading || editSaving}
+                        onChange={(e) => handleThumbSelect(e.target.files?.[0] ?? null)}
+                      />
+                    </label>
                     <div className="mt-3 flex items-center gap-3">
                       <label className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-slate-50 cursor-pointer">
                         <Image className="w-4 h-4" />
-                        {editThumbFile ? "Change thumbnail" : "Upload thumbnail"}
+                        {editThumbFile ? "Change" : "Upload"}
                         <input
                           type="file"
                           accept="image/jpeg,image/png"
@@ -1506,67 +1652,45 @@ export default function VideosPage() {
                           onClick={() => handleThumbSelect(null)}
                           className="text-sm text-muted hover:text-foreground"
                         >
-                          Remove
+                          Undo
                         </button>
                       )}
                     </div>
-                    <p className="text-xs text-muted mt-2">
-                      JPG or PNG, max 2 MB, 1280×720 recommended. Uploaded to YouTube when you click Save.
-                    </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Privacy Status</label>
-                    <select
-                      value={editPrivacy}
-                      onChange={(e) => setEditPrivacy(e.target.value)}
-                      disabled={editLoading}
-                      className="w-full px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    >
-                      <option value="public">Public</option>
-                      <option value="private">Private</option>
-                      <option value="unlisted">Unlisted</option>
-                    </select>
+
+                  <div className="bg-white rounded-xl border border-border p-5">
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Visibility</h3>
+                    <div className="space-y-2">
+                      {([
+                        ["public", "Public", "Everyone can watch your video", Globe],
+                        ["unlisted", "Unlisted", "Anyone with the video link can watch", EyeOff],
+                        ["private", "Private", "Only you and people you choose can watch", Lock],
+                      ] as const).map(([value, label, hint, Icon]) => (
+                        <label
+                          key={value}
+                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition ${editPrivacy === value ? "border-primary bg-primary/5" : "border-border hover:bg-slate-50"}`}
+                        >
+                          <input
+                            type="radio"
+                            name="privacy"
+                            value={value}
+                            checked={editPrivacy === value}
+                            disabled={editLoading}
+                            onChange={() => setEditPrivacy(value)}
+                            className="mt-1 accent-primary"
+                          />
+                          <Icon className={`w-4 h-4 mt-0.5 ${editPrivacy === value ? "text-primary" : "text-muted"}`} />
+                          <div>
+                            <div className="text-sm font-medium text-foreground">{label}</div>
+                            <div className="text-xs text-muted">{hint}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="lg:col-span-2 space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      disabled={editLoading}
-                      maxLength={100}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full px-4 py-3 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                    <p className="text-xs text-muted mt-1 text-right">{editTitle.length}/100</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Description</label>
-                    <textarea
-                      value={editDesc}
-                      onChange={(e) => setEditDesc(e.target.value)}
-                      disabled={editLoading}
-                      maxLength={5000}
-                      rows={18}
-                      className="w-full px-4 py-3 border border-border rounded-lg text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y min-h-[320px]"
-                    />
-                    <p className="text-xs text-muted mt-1 text-right">{editDesc.length}/5000</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Tags (comma separated)</label>
-                    <textarea
-                      value={editTags}
-                      onChange={(e) => setEditTags(e.target.value)}
-                      disabled={editLoading}
-                      rows={4}
-                      placeholder="tag1, tag2, tag3"
-                      className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
-                    />
-                    <p className="text-xs text-muted mt-1">Separate tags with commas · {editTags.length}/500 characters</p>
-                  </div>
+
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
-                    Title, description, tags, privacy and thumbnail are saved directly to YouTube through the channel&apos;s authorized token.
+                    Changes are saved directly to YouTube through this channel&apos;s authorized token.
                   </div>
                 </div>
               </div>
@@ -1574,7 +1698,6 @@ export default function VideosPage() {
           </div>
         </div>
       )}
-
       {/* Delete Confirmation Modal */}
       {deleteVideo && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

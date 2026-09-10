@@ -69,6 +69,56 @@ function hasChannelAccess(channelIds: string[], allowedChannelIds: Set<string>):
   return channelIds.every((channelId) => allowedChannelIds.has(channelId));
 }
 
+interface ListVideo {
+  id?: unknown;
+  snippet?: {
+    title?: unknown;
+    description?: unknown;
+    channelId?: unknown;
+    channelTitle?: unknown;
+    publishedAt?: unknown;
+    tags?: unknown;
+    thumbnails?: { default?: unknown; medium?: unknown } | null;
+  } | null;
+  contentDetails?: { duration?: unknown; licensedContent?: unknown } | null;
+  status?: unknown;
+  statistics?: unknown;
+}
+
+const LIST_DESCRIPTION_CHARS = 300;
+
+// Trim the raw YouTube payload to the fields the list pages render. The full
+// description/tags are re-fetched by the editor, so the list only needs a preview.
+function toListVideos(videos: unknown[]): ListVideo[] {
+  return videos.map((item) => {
+    const video = item as ListVideo;
+    const description = typeof video.snippet?.description === "string" ? video.snippet.description : "";
+    return {
+      id: video.id,
+      snippet: video.snippet
+        ? {
+            title: video.snippet.title,
+            description: description.slice(0, LIST_DESCRIPTION_CHARS),
+            channelId: video.snippet.channelId,
+            channelTitle: video.snippet.channelTitle,
+            publishedAt: video.snippet.publishedAt,
+            tags: video.snippet.tags,
+            thumbnails: video.snippet.thumbnails
+              ? { default: video.snippet.thumbnails.default, medium: video.snippet.thumbnails.medium }
+              : null,
+          }
+        : null,
+      contentDetails: video.contentDetails
+        ? { duration: video.contentDetails.duration, licensedContent: video.contentDetails.licensedContent }
+        : null,
+      status: video.status,
+      statistics: video.statistics,
+    };
+  });
+}
+
+const LIST_CACHE_HEADERS = { "Cache-Control": "private, max-age=120" };
+
 // Fetch fresh videos from YouTube (per-channel token first, then public API key)
 // and write them to the Redis cache. Returns the videos, or null on failure.
 async function fetchAndCacheChannelVideos(
@@ -195,22 +245,25 @@ export async function GET(request: Request) {
             // Fire-and-forget background refresh (long-running PM2 process keeps it alive).
             void fetchAndCacheChannelVideos(channelId, maxResults);
           }
-          return Response.json({
-            data: cachedVids.videos,
-            _cached: true,
-            _stale: !isFresh,
-            _lastUpdated: cachedVids.lastUpdated,
-          });
+          return Response.json(
+            {
+              data: toListVideos(cachedVids.videos),
+              _cached: true,
+              _stale: !isFresh,
+              _lastUpdated: cachedVids.lastUpdated,
+            },
+            { headers: LIST_CACHE_HEADERS }
+          );
         }
 
         // No usable cache (or a forced refresh): fetch live, cache, and return.
         const freshVideos = await fetchAndCacheChannelVideos(channelId, maxResults);
         if (freshVideos?.length) {
-          return Response.json({ data: freshVideos });
+          return Response.json({ data: toListVideos(freshVideos) });
         }
         // Live fetch failed but we still have (stale) cache — serve it rather than error.
         if (cachedVids?.videos?.length) {
-          return Response.json({ data: cachedVids.videos, _cached: true, _lastUpdated: cachedVids.lastUpdated });
+          return Response.json({ data: toListVideos(cachedVids.videos), _cached: true, _lastUpdated: cachedVids.lastUpdated });
         }
         return Response.json({ error: "No token available for this channel. Please validate the channel token first." }, { status: 401 });
       }
