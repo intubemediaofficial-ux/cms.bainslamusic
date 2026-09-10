@@ -1013,16 +1013,14 @@ export default function VideosPage() {
                                     >
                                       youtu.be/{v.id}
                                     </a>
-                                    <a
-                                      href={`https://studio.youtube.com/video/${v.id}/edit`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); void openEdit(v); }}
                                       className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-primary bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded ml-auto shrink-0 cursor-pointer"
                                     >
                                       <Edit2 className="w-3 h-3" />
                                       Edit
-                                    </a>
+                                    </button>
                                     <a
                                       href={`https://www.youtube.com/watch?v=${v.id}`}
                                       target="_blank"
