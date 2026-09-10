@@ -198,6 +198,7 @@ export default function VideosPage() {
   const [editTags, setEditTags] = useState("");
   const [editPrivacy, setEditPrivacy] = useState("public");
   const [editSaving, setEditSaving] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
 
   const [deleteVideo, setDeleteVideo] = useState<VideoItem | null>(null);
@@ -482,7 +483,7 @@ export default function VideosPage() {
 
   const isLoading = loading;
 
-  const openEdit = (video: VideoItem) => {
+  const openEdit = async (video: VideoItem) => {
     setEditVideo(video);
     setEditTitle(video.snippet?.title || "");
     setEditDesc(video.snippet?.description || "");
@@ -490,6 +491,25 @@ export default function VideosPage() {
     setEditPrivacy(video.status?.privacyStatus || "public");
     setEditError("");
     setOpenMenuId(null);
+    if (!video.id || !video.snippet?.channelId) return;
+    setEditLoading(true);
+    try {
+      const params = new URLSearchParams({ videoId: video.id, channelId: video.snippet.channelId });
+      const res = await fetch(`/api/youtube/video?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(data.error || "Could not load the latest video details. Saving may overwrite the description or tags.");
+        return;
+      }
+      setEditTitle(data.data.title || "");
+      setEditDesc(data.data.description || "");
+      setEditTags((data.data.tags || []).join(", "));
+      setEditPrivacy(data.data.privacyStatus || "public");
+    } catch {
+      setEditError("Could not load the latest video details. Saving may overwrite the description or tags.");
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const handleEditSave = async () => {
@@ -1270,15 +1290,21 @@ export default function VideosPage() {
                                 <MoreHorizontal className="w-4 h-4 text-muted" />
                               </button>
                               {openMenuId === video.id && (
-                                <div className="absolute right-0 top-8 bg-white border border-border rounded-lg shadow-lg z-20 w-48 py-1">
+                                <div className="absolute right-0 top-8 bg-white border border-border rounded-lg shadow-lg z-20 w-52 py-1">
+                                  <button
+                                    onClick={() => void openEdit(video)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-slate-50"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" /> Edit title / description
+                                  </button>
                                   <a
                                     href={`https://studio.youtube.com/video/${video.id}/edit`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={() => setOpenMenuId(null)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-slate-50"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:bg-slate-50"
                                   >
-                                    <Edit2 className="w-3.5 h-3.5" /> Edit in YouTube Studio
+                                    <Image className="w-3.5 h-3.5" /> Thumbnail (YouTube Studio)
                                   </a>
                                   <div className="border-t border-border my-1" />
                                   <button
@@ -1358,11 +1384,17 @@ export default function VideosPage() {
               {editError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{editError}</div>
               )}
+              {editLoading && (
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading latest details from YouTube…
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Title</label>
                 <input
                   type="text"
                   value={editTitle}
+                  disabled={editLoading}
                   onChange={(e) => setEditTitle(e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
@@ -1372,7 +1404,8 @@ export default function VideosPage() {
                 <textarea
                   value={editDesc}
                   onChange={(e) => setEditDesc(e.target.value)}
-                  rows={4}
+                  disabled={editLoading}
+                  rows={6}
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 />
               </div>
@@ -1382,6 +1415,7 @@ export default function VideosPage() {
                   type="text"
                   value={editTags}
                   onChange={(e) => setEditTags(e.target.value)}
+                  disabled={editLoading}
                   placeholder="tag1, tag2, tag3"
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
@@ -1392,6 +1426,7 @@ export default function VideosPage() {
                 <select
                   value={editPrivacy}
                   onChange={(e) => setEditPrivacy(e.target.value)}
+                  disabled={editLoading}
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   <option value="public">Public</option>
@@ -1400,7 +1435,7 @@ export default function VideosPage() {
                 </select>
               </div>
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
-                To change the thumbnail, click &quot;Change Thumbnail&quot; in the actions menu — it will open YouTube Studio where you can upload a new thumbnail.
+Title, description, tags and privacy are saved directly to YouTube through the channel&apos;s authorized token. Thumbnail changes still need YouTube Studio (use the actions menu).
               </div>
             </div>
             <div className="flex justify-end gap-3 p-5 border-t border-border sticky bottom-0 bg-white">
@@ -1412,7 +1447,7 @@ export default function VideosPage() {
               </button>
               <button
                 onClick={handleEditSave}
-                disabled={editSaving}
+                disabled={editSaving || editLoading}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50"
               >
                 {editSaving && <Loader2 className="w-4 h-4 animate-spin" />}
