@@ -75,6 +75,59 @@ async function getAccessTokenForChannel(channelId: string): Promise<string | nul
   return token;
 }
 
+export async function GET(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const videoId = searchParams.get("videoId");
+  const channelId = searchParams.get("channelId");
+  if (!videoId || !channelId) {
+    return Response.json({ error: "videoId and channelId required" }, { status: 400 });
+  }
+
+  const approvedChannels = await getApprovedChannels(session.user.email);
+  if (!approvedChannels.has(channelId)) {
+    return Response.json({ error: "You can only edit assigned channels" }, { status: 403 });
+  }
+
+  const accessToken = await getAccessTokenForChannel(channelId);
+  if (!accessToken) {
+    return Response.json({ error: "No valid token for this channel. Please validate the channel token first." }, { status: 401 });
+  }
+
+  try {
+    const detailRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,status&id=${encodeURIComponent(videoId)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }
+    );
+    const detailData = await detailRes.json();
+    if (!detailRes.ok) {
+      return Response.json(
+        { error: detailData.error?.message || "Failed to load video" },
+        { status: detailRes.status }
+      );
+    }
+    const video = detailData.items?.[0];
+    if (!video) {
+      return Response.json({ error: "Video not found" }, { status: 404 });
+    }
+    return Response.json({
+      data: {
+        id: video.id,
+        title: video.snippet?.title ?? "",
+        description: video.snippet?.description ?? "",
+        tags: Array.isArray(video.snippet?.tags) ? video.snippet.tags : [],
+        privacyStatus: video.status?.privacyStatus ?? "public",
+      },
+    });
+  } catch (error) {
+    console.error("[YouTube Video] Detail error:", error);
+    return Response.json({ error: "Failed to load video" }, { status: 500 });
+  }
+}
 
 export async function PUT(request: Request) {
   const session = await getServerSession(authOptions);
