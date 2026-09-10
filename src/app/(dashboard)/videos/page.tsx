@@ -200,6 +200,9 @@ export default function VideosPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
+  const [editThumbFile, setEditThumbFile] = useState<File | null>(null);
+  const [editThumbPreview, setEditThumbPreview] = useState("");
+  const [editThumbUploading, setEditThumbUploading] = useState(false);
 
   const [deleteVideo, setDeleteVideo] = useState<VideoItem | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -483,6 +486,41 @@ export default function VideosPage() {
 
   const isLoading = loading;
 
+  const clearEditThumb = () => {
+    if (editThumbPreview) URL.revokeObjectURL(editThumbPreview);
+    setEditThumbFile(null);
+    setEditThumbPreview("");
+  };
+
+  const closeEdit = () => {
+    clearEditThumb();
+    setEditVideo(null);
+  };
+
+  const handleThumbSelect = (file: File | null) => {
+    if (editThumbPreview) URL.revokeObjectURL(editThumbPreview);
+    if (!file) {
+      setEditThumbFile(null);
+      setEditThumbPreview("");
+      return;
+    }
+    if (!/^image\/(jpeg|png)$/.test(file.type)) {
+      setEditError("Thumbnail must be a JPG or PNG image");
+      setEditThumbFile(null);
+      setEditThumbPreview("");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setEditError("Thumbnail must be 2 MB or smaller");
+      setEditThumbFile(null);
+      setEditThumbPreview("");
+      return;
+    }
+    setEditError("");
+    setEditThumbFile(file);
+    setEditThumbPreview(URL.createObjectURL(file));
+  };
+
   const openEdit = async (video: VideoItem) => {
     setEditVideo(video);
     setEditTitle(video.snippet?.title || "");
@@ -490,6 +528,7 @@ export default function VideosPage() {
     setEditTags((video.snippet?.tags || []).join(", "));
     setEditPrivacy(video.status?.privacyStatus || "public");
     setEditError("");
+    clearEditThumb();
     setOpenMenuId(null);
     if (!video.id || !video.snippet?.channelId) return;
     setEditLoading(true);
@@ -535,7 +574,27 @@ export default function VideosPage() {
         setEditError(data.error || "Failed to update video. Please ensure channel token is valid.");
         return;
       }
-      setEditVideo(null);
+      if (editThumbFile) {
+        setEditThumbUploading(true);
+        try {
+          const form = new FormData();
+          form.append("videoId", editVideo.id);
+          form.append("channelId", editVideo.snippet.channelId);
+          form.append("file", editThumbFile);
+          const thumbRes = await fetch("/api/youtube/video/thumbnail", { method: "POST", body: form });
+          const thumbData = await thumbRes.json();
+          if (!thumbRes.ok) {
+            setEditError(
+              `Details saved, but thumbnail upload failed: ${thumbData.error || "unknown error"}`
+            );
+            fetchVideos();
+            return;
+          }
+        } finally {
+          setEditThumbUploading(false);
+        }
+      }
+      closeEdit();
       fetchVideos();
     } catch {
       setEditError("Network error — check your connection and try again");
@@ -1293,7 +1352,7 @@ export default function VideosPage() {
                                     onClick={() => void openEdit(video)}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-slate-50"
                                   >
-                                    <Edit2 className="w-3.5 h-3.5" /> Edit title / description
+                                    <Edit2 className="w-3.5 h-3.5" /> Edit video (title, description, thumbnail)
                                   </button>
                                   <a
                                     href={`https://studio.youtube.com/video/${video.id}/edit`}
@@ -1302,7 +1361,7 @@ export default function VideosPage() {
                                     onClick={() => setOpenMenuId(null)}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:bg-slate-50"
                                   >
-                                    <Image className="w-3.5 h-3.5" /> Thumbnail (YouTube Studio)
+                                    <Image className="w-3.5 h-3.5" /> Open in YouTube Studio
                                   </a>
                                   <div className="border-t border-border my-1" />
                                   <button
@@ -1368,77 +1427,19 @@ export default function VideosPage() {
         </>
       )}
 
-      {/* Edit Video Modal */}
+      {/* Edit Video — full-page editor */}
       {editVideo && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-white">
-              <h2 className="text-lg font-semibold text-foreground">Edit Video</h2>
-              <button onClick={() => setEditVideo(null)} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-muted" />
-              </button>
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white">
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold text-foreground truncate">Edit Video</h2>
+              <p className="text-xs text-muted truncate">
+                {editVideo.snippet?.channelTitle || editVideo.snippet?.channelId} · youtu.be/{editVideo.id}
+              </p>
             </div>
-            <div className="p-5 space-y-4">
-              {editError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{editError}</div>
-              )}
-              {editLoading && (
-                <div className="flex items-center gap-2 text-xs text-muted">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading latest details from YouTube…
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Title</label>
-                <input
-                  type="text"
-                  value={editTitle}
-                  disabled={editLoading}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Description</label>
-                <textarea
-                  value={editDesc}
-                  onChange={(e) => setEditDesc(e.target.value)}
-                  disabled={editLoading}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Tags (comma separated)</label>
-                <input
-                  type="text"
-                  value={editTags}
-                  onChange={(e) => setEditTags(e.target.value)}
-                  disabled={editLoading}
-                  placeholder="tag1, tag2, tag3"
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-                <p className="text-xs text-muted mt-1">Separate tags with commas</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Privacy Status</label>
-                <select
-                  value={editPrivacy}
-                  onChange={(e) => setEditPrivacy(e.target.value)}
-                  disabled={editLoading}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  <option value="public">Public</option>
-                  <option value="private">Private</option>
-                  <option value="unlisted">Unlisted</option>
-                </select>
-              </div>
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
-Title, description, tags and privacy are saved directly to YouTube through the channel&apos;s authorized token. Thumbnail changes still need YouTube Studio (use the actions menu).
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 p-5 border-t border-border sticky bottom-0 bg-white">
+            <div className="flex items-center gap-3 shrink-0">
               <button
-                onClick={() => setEditVideo(null)}
+                onClick={closeEdit}
                 className="px-4 py-2 text-sm text-muted hover:bg-slate-100 rounded-lg"
               >
                 Cancel
@@ -1446,11 +1447,129 @@ Title, description, tags and privacy are saved directly to YouTube through the c
               <button
                 onClick={handleEditSave}
                 disabled={editSaving || editLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50"
               >
                 {editSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                Save Changes
+                {editThumbUploading ? "Uploading thumbnail…" : editSaving ? "Saving…" : "Save Changes"}
               </button>
+              <button onClick={closeEdit} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-muted" />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-6xl mx-auto p-6 space-y-4">
+              {editError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{editError}</div>
+              )}
+              {editLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading latest details from YouTube…
+                </div>
+              )}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-1 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Thumbnail</label>
+                    <div className="aspect-video w-full rounded-xl overflow-hidden bg-slate-100 border border-border">
+                      {(editThumbPreview ||
+                        editVideo.snippet?.thumbnails?.medium?.url ||
+                        editVideo.snippet?.thumbnails?.default?.url) && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={
+                            editThumbPreview ||
+                            editVideo.snippet?.thumbnails?.medium?.url ||
+                            editVideo.snippet?.thumbnails?.default?.url ||
+                            ""
+                          }
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <label className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-slate-50 cursor-pointer">
+                        <Image className="w-4 h-4" />
+                        {editThumbFile ? "Change thumbnail" : "Upload thumbnail"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png"
+                          className="hidden"
+                          disabled={editLoading || editSaving}
+                          onChange={(e) => handleThumbSelect(e.target.files?.[0] ?? null)}
+                        />
+                      </label>
+                      {editThumbFile && (
+                        <button
+                          type="button"
+                          onClick={() => handleThumbSelect(null)}
+                          className="text-sm text-muted hover:text-foreground"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted mt-2">
+                      JPG or PNG, max 2 MB, 1280×720 recommended. Uploaded to YouTube when you click Save.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Privacy Status</label>
+                    <select
+                      value={editPrivacy}
+                      onChange={(e) => setEditPrivacy(e.target.value)}
+                      disabled={editLoading}
+                      className="w-full px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      <option value="public">Public</option>
+                      <option value="private">Private</option>
+                      <option value="unlisted">Unlisted</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="lg:col-span-2 space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Title</label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      disabled={editLoading}
+                      maxLength={100}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full px-4 py-3 border border-border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <p className="text-xs text-muted mt-1 text-right">{editTitle.length}/100</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Description</label>
+                    <textarea
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      disabled={editLoading}
+                      maxLength={5000}
+                      rows={18}
+                      className="w-full px-4 py-3 border border-border rounded-lg text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y min-h-[320px]"
+                    />
+                    <p className="text-xs text-muted mt-1 text-right">{editDesc.length}/5000</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Tags (comma separated)</label>
+                    <textarea
+                      value={editTags}
+                      onChange={(e) => setEditTags(e.target.value)}
+                      disabled={editLoading}
+                      rows={4}
+                      placeholder="tag1, tag2, tag3"
+                      className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
+                    />
+                    <p className="text-xs text-muted mt-1">Separate tags with commas · {editTags.length}/500 characters</p>
+                  </div>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+                    Title, description, tags, privacy and thumbnail are saved directly to YouTube through the channel&apos;s authorized token.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
