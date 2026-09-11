@@ -346,8 +346,12 @@ export default function VideosPage() {
     const result: VideoItem[] = [];
     for (const video of videos) {
       if (channelFilter !== "all" && video.snippet?.channelId !== channelFilter) continue;
-      const title = video.snippet?.title || "";
-      if (searchQuery && !title.toLowerCase().includes(searchQuery.toLowerCase())) continue;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const title = (video.snippet?.title || "").toLowerCase();
+        const tags = (video.snippet?.tags || []).join(" ").toLowerCase();
+        if (!title.includes(q) && !tags.includes(q) && video.id !== searchQuery.trim()) continue;
+      }
       if (statusFilter !== "all") {
         const rawPrivacy = video.status?.privacyStatus;
         const videoPrivacy = rawPrivacy ? rawPrivacy.toLowerCase() : "public";
@@ -682,13 +686,21 @@ export default function VideosPage() {
     });
   };
 
+  const pageIds = paginatedVideos.map((v) => v.id!).filter(Boolean);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedVideos.has(id));
+  const filteredIds = filteredVideos.map((v) => v.id!).filter(Boolean);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedVideos.has(id));
+
   const toggleSelectAll = () => {
-    if (selectedVideos.size === paginatedVideos.length) {
-      setSelectedVideos(new Set());
-    } else {
-      setSelectedVideos(new Set(paginatedVideos.map((v) => v.id!).filter(Boolean)));
-    }
+    setSelectedVideos((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
   };
+
+  const selectAllFiltered = () => setSelectedVideos(new Set(filteredIds));
 
   const handleBulkDelete = async () => {
     if (selectedVideos.size === 0) return;
@@ -1135,6 +1147,14 @@ export default function VideosPage() {
           {selectedVideos.size > 0 && (
             <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
               <span className="text-sm font-medium text-blue-700">{selectedVideos.size} selected</span>
+              {!allFilteredSelected && filteredIds.length > selectedVideos.size && (
+                <button
+                  onClick={selectAllFiltered}
+                  className="text-xs font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900"
+                >
+                  Select all {filteredIds.length} matching videos
+                </button>
+              )}
               <div className="flex items-center gap-2 ml-auto">
                 <button
                   onClick={() => handleBulkPrivacy("private")}
@@ -1149,6 +1169,13 @@ export default function VideosPage() {
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-lg text-xs font-medium text-foreground hover:bg-slate-50 disabled:opacity-50"
                 >
                   <Globe className="w-3.5 h-3.5" /> Make Public
+                </button>
+                <button
+                  onClick={() => handleBulkPrivacy("unlisted")}
+                  disabled={bulkActionInProgress}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-lg text-xs font-medium text-foreground hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <EyeOff className="w-3.5 h-3.5" /> Make Unlisted
                 </button>
                 <button
                   onClick={handleBulkDelete}
@@ -1245,7 +1272,7 @@ export default function VideosPage() {
                     <tr className="border-b border-border">
                       <th className="text-left py-3 px-2 w-10">
                         <button onClick={toggleSelectAll} className="p-1 hover:bg-slate-100 rounded">
-                          {selectedVideos.size === paginatedVideos.length && paginatedVideos.length > 0 ? (
+                          {allPageSelected ? (
                             <CheckSquare className="w-4 h-4 text-primary" />
                           ) : (
                             <Square className="w-4 h-4 text-muted" />

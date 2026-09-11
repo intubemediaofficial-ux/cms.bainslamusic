@@ -23,6 +23,8 @@ import {
   Users,
   Video,
   Copy,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -44,6 +46,7 @@ interface VideoItem {
     channelId?: string | null;
     channelTitle?: string | null;
     publishedAt?: string | null;
+    tags?: string[] | null;
     thumbnails?: {
       medium?: { url?: string | null } | null;
       default?: { url?: string | null } | null;
@@ -343,9 +346,13 @@ export default function AdminVideosPage() {
       // Channel filter
       if (channelFilter !== "all" && video.snippet?.channelId !== channelFilter) continue;
 
-      // Search filter
-      const title = video.snippet?.title || "";
-      if (searchQuery && !title.toLowerCase().includes(searchQuery.toLowerCase())) continue;
+      // Search filter (title, tags or exact video ID)
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const title = (video.snippet?.title || "").toLowerCase();
+        const tags = (video.snippet?.tags || []).join(" ").toLowerCase();
+        if (!title.includes(q) && !tags.includes(q) && video.id !== searchQuery.trim()) continue;
+      }
 
       // Privacy filter - strict comparison
       if (privacyFilter !== "all") {
@@ -371,6 +378,12 @@ export default function AdminVideosPage() {
 
   // Reset page when filters change
   useEffect(() => { setCurrentPage(1); }, [searchQuery, privacyFilter, monetizationFilter, channelFilter, selectedClient]);
+
+  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
+  const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
+
+  useEffect(() => { queueMicrotask(() => setSelectedVideos(new Set())); }, [selectedClient]);
 
   const totalPages = Math.ceil(filteredVideos.length / VIDEOS_PER_PAGE);
   const paginatedVideos = useMemo(() => {
@@ -442,6 +455,97 @@ export default function AdminVideosPage() {
   }, [videos]);
 
   const duplicateGroups = useMemo((): DuplicateGroup[] => channelDuplicateGroups.flatMap((cg) => cg.groups), [channelDuplicateGroups]);
+
+  const pageIds = paginatedVideos.map((v) => v.id!).filter(Boolean);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedVideos.has(id));
+  const filteredIds = filteredVideos.map((v) => v.id!).filter(Boolean);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedVideos.has(id));
+
+  const toggleSelect = (videoId: string) => {
+    setSelectedVideos((prev) => {
+      const next = new Set(prev);
+      if (next.has(videoId)) next.delete(videoId);
+      else next.add(videoId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedVideos((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const selectAllFiltered = () => setSelectedVideos(new Set(filteredIds));
+
+  const selectedPayload = () =>
+    videos
+      .filter((v) => v.id && selectedVideos.has(v.id))
+      .map((v) => ({ videoId: v.id!, channelId: v.snippet?.channelId || "" }));
+
+  const handleBulkDelete = async () => {
+    if (selectedVideos.size === 0) return;
+    if (!confirm(`Delete ${selectedVideos.size} video(s) from YouTube? This cannot be undone.`)) return;
+    setBulkActionInProgress(true);
+    setBulkResult(null);
+    try {
+      const res = await fetch("/api/youtube/video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "bulkDelete", videos: selectedPayload() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const successIds = new Set(
+          data.data.results.filter((r: { success: boolean }) => r.success).map((r: { videoId: string }) => r.videoId)
+        );
+        setVideos((prev) => prev.filter((v) => !successIds.has(v.id!)));
+        setBulkResult(`${data.data.successCount}/${data.data.totalCount} videos deleted`);
+        setSelectedVideos(new Set());
+      } else {
+        setBulkResult(data.error || "Bulk delete failed");
+      }
+    } catch {
+      setBulkResult("Network error during bulk delete");
+    } finally {
+      setBulkActionInProgress(false);
+    }
+  };
+
+  const handleBulkPrivacy = async (privacyStatus: "public" | "unlisted" | "private") => {
+    if (selectedVideos.size === 0) return;
+    setBulkActionInProgress(true);
+    setBulkResult(null);
+    try {
+      const res = await fetch("/api/youtube/video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "bulkPrivacy", videos: selectedPayload(), privacyStatus }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const successIds = new Set(
+          data.data.results.filter((r: { success: boolean }) => r.success).map((r: { videoId: string }) => r.videoId)
+        );
+        setVideos((prev) =>
+          prev.map((v) =>
+            v.id && successIds.has(v.id) ? { ...v, status: { ...v.status, privacyStatus } } : v
+          )
+        );
+        setBulkResult(`${data.data.successCount}/${data.data.totalCount} videos set to ${privacyStatus}`);
+        setSelectedVideos(new Set());
+      } else {
+        setBulkResult(data.error || "Bulk privacy change failed");
+      }
+    } catch {
+      setBulkResult("Network error during bulk privacy change");
+    } finally {
+      setBulkActionInProgress(false);
+    }
+  };
 
   const handleDupBulkDelete = async () => {
     if (selectedDupVideos.size === 0) return;
@@ -857,10 +961,47 @@ export default function AdminVideosPage() {
               Showing {filteredVideos.length} of {videos.length} videos
             </p>
           )}
+          {bulkResult && (
+            <div className="flex items-center justify-between gap-3 px-4 py-2 mb-3 bg-slate-50 border border-border rounded-lg text-sm text-foreground">
+              <span>{bulkResult}</span>
+              <button onClick={() => setBulkResult(null)} className="p-1 hover:bg-slate-200 rounded"><X className="w-3.5 h-3.5" /></button>
+            </div>
+          )}
+          {selectedVideos.size > 0 && (
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 mb-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-sm font-medium text-blue-700">{selectedVideos.size} selected</span>
+              {!allFilteredSelected && filteredIds.length > selectedVideos.size && (
+                <button onClick={selectAllFiltered} className="text-xs font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900">
+                  Select all {filteredIds.length} matching videos
+                </button>
+              )}
+              <div className="flex flex-wrap items-center gap-2 ml-auto">
+                <button onClick={() => handleBulkPrivacy("public")} disabled={bulkActionInProgress} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-lg text-xs font-medium text-foreground hover:bg-slate-50 disabled:opacity-50">
+                  <Globe className="w-3.5 h-3.5" /> Make Public
+                </button>
+                <button onClick={() => handleBulkPrivacy("unlisted")} disabled={bulkActionInProgress} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-lg text-xs font-medium text-foreground hover:bg-slate-50 disabled:opacity-50">
+                  <EyeOff className="w-3.5 h-3.5" /> Make Unlisted
+                </button>
+                <button onClick={() => handleBulkPrivacy("private")} disabled={bulkActionInProgress} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-lg text-xs font-medium text-foreground hover:bg-slate-50 disabled:opacity-50">
+                  <Lock className="w-3.5 h-3.5" /> Make Private
+                </button>
+                <button onClick={handleBulkDelete} disabled={bulkActionInProgress} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 disabled:opacity-50">
+                  {bulkActionInProgress ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  Delete Selected
+                </button>
+                <button onClick={() => setSelectedVideos(new Set())} className="px-3 py-1.5 text-xs text-muted hover:bg-slate-100 rounded-lg">Clear</button>
+              </div>
+            </div>
+          )}
           <div className="overflow-x-auto" key={`avt-${privacyFilter}-${channelFilter}-${monetizationFilter}`}>
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
+                  <th className="text-left py-3 px-2 w-10">
+                    <button onClick={toggleSelectAll} className="p-1 hover:bg-slate-100 rounded" title={allPageSelected ? "Unselect this page" : "Select this page"}>
+                      {allPageSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4 text-muted" />}
+                    </button>
+                  </th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-muted uppercase tracking-wider">Video</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-muted uppercase tracking-wider">Channel</th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-muted uppercase tracking-wider">Status</th>
@@ -881,7 +1022,12 @@ export default function AdminVideosPage() {
                   const videoClaims = claims.filter((c) => c.videoId === video.id && c.status === "active");
 
                   return (
-                    <tr key={video.id} className="border-b border-border/50 hover:bg-slate-50 transition-colors">
+                    <tr key={video.id} className={`border-b border-border/50 hover:bg-slate-50 transition-colors ${video.id && selectedVideos.has(video.id) ? "bg-blue-50/60" : ""}`}>
+                      <td className="py-3 px-2">
+                        <button onClick={() => video.id && toggleSelect(video.id)} className="p-1 hover:bg-slate-100 rounded">
+                          {video.id && selectedVideos.has(video.id) ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4 text-muted" />}
+                        </button>
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-20 h-12 bg-slate-200 rounded-lg overflow-hidden shrink-0">
