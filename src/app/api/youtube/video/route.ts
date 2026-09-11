@@ -48,6 +48,67 @@ async function getApprovedChannels(email: string): Promise<Set<string>> {
   return new Set(scopedUsers.flatMap((user) => user.channels || []));
 }
 
+const BULK_CONCURRENCY = 8;
+
+interface BulkResult {
+  videoId: string;
+  success: boolean;
+  error?: string;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+async function removeCachedVideos(channelId: string, videoIds: Set<string>): Promise<void> {
+  try {
+    const cached = await getCachedChannelVideos(channelId);
+    if (!cached?.videos) return;
+    const filtered = cached.videos.filter((v) => {
+      const id = (v as { id?: string } | null)?.id;
+      return !(id && videoIds.has(id));
+    });
+    await cacheChannelVideos(channelId, filtered);
+  } catch {
+    return;
+  }
+}
+
+async function updateCachedVideos(channelId: string, updates: CachedVideo[]): Promise<void> {
+  try {
+    const cached = await getCachedChannelVideos(channelId);
+    if (!cached?.videos) return;
+    const byId = new Map(updates.map((u) => [u.id, u]));
+    const videos = cached.videos.map((item) => {
+      const video = item as CachedVideo;
+      const update = video?.id ? byId.get(video.id) : undefined;
+      if (!update) return item;
+      return {
+        ...video,
+        ...update,
+        snippet: { ...video.snippet, ...update.snippet },
+        status: { ...video.status, ...update.status },
+      };
+    });
+    await cacheChannelVideos(channelId, videos);
+  } catch {
+    return;
+  }
+}
+
 async function updateCachedVideo(channelId: string, update: CachedVideo): Promise<void> {
   try {
     const cached = await getCachedChannelVideos(channelId);
@@ -233,114 +294,118 @@ export async function POST(request: Request) {
       return Response.json({ error: "You can only update assigned channels" }, { status: 403 });
     }
 
-    const results: { videoId: string; success: boolean; error?: string }[] = [];
+    if (action !== "bulkDelete" && action !== "bulkPrivacy") {
+      return Response.json({ error: "Invalid action. Use bulkDelete or bulkPrivacy" }, { status: 400 });
+    }
+    const { privacyStatus } = body as { privacyStatus?: string };
+    if (
+      action === "bulkPrivacy" &&
+      (!privacyStatus || !["public", "unlisted", "private"].includes(privacyStatus))
+    ) {
+      return Response.json(
+        { error: "privacyStatus must be public, unlisted or private" },
+        { status: 400 }
+      );
+    }
 
-    if (action === "bulkDelete") {
-      for (const { videoId, channelId } of videos) {
-        const accessToken = await getAccessTokenForChannel(channelId);
-        if (!accessToken) {
-          results.push({ videoId, success: false, error: "No valid token" });
-          continue;
-        }
+    const channelIds = Array.from(new Set(videos.map((v) => v.channelId)));
+    const tokenEntries = await mapWithConcurrency(
+      channelIds,
+      BULK_CONCURRENCY,
+      async (cid) => [cid, await getAccessTokenForChannel(cid)] as const
+    );
+    const tokens = new Map(tokenEntries);
+
+    const removedByChannel = new Map<string, Set<string>>();
+    const updatedByChannel = new Map<string, CachedVideo[]>();
+    const markRemoved = (channelId: string, videoId: string) => {
+      if (!removedByChannel.has(channelId)) removedByChannel.set(channelId, new Set());
+      removedByChannel.get(channelId)!.add(videoId);
+    };
+
+    const processOne = async ({ videoId, channelId }: { videoId: string; channelId: string }): Promise<BulkResult> => {
+      const accessToken = tokens.get(channelId);
+      if (!accessToken) return { videoId, success: false, error: "No valid token" };
+
+      if (action === "bulkDelete") {
         try {
           const deleteRes = await fetch(
             `https://www.googleapis.com/youtube/v3/videos?id=${videoId}`,
             { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }
           );
-          if (deleteRes.ok || deleteRes.status === 204) {
-            results.push({ videoId, success: true });
-            // Remove from KV cache
-            try {
-              const cached = await getCachedChannelVideos(channelId);
-              if (cached?.videos) {
-                const filtered = cached.videos.filter((v) => v && (v as { id?: string }).id !== videoId);
-                await cacheChannelVideos(channelId, filtered);
-              }
-            } catch { /* cache update best-effort */ }
-          } else if (deleteRes.status === 404) {
-            // Video already deleted on YouTube — treat as success, clean cache
-            results.push({ videoId, success: true });
-            try {
-              const cached = await getCachedChannelVideos(channelId);
-              if (cached?.videos) {
-                const filtered = cached.videos.filter((v) => v && (v as { id?: string }).id !== videoId);
-                await cacheChannelVideos(channelId, filtered);
-              }
-            } catch { /* cache cleanup best-effort */ }
-          } else {
-            const data = await deleteRes.json().catch(() => ({}));
-            const errMsg = (data as Record<string, Record<string, string>>)?.error?.message || "Failed";
-            const errReason = (data as { error?: { errors?: Array<{ reason?: string }> } })?.error?.errors?.[0]?.reason || "";
-            const tokenInfo = await getChannelToken(channelId);
-            const hasMismatch = tokenInfo?.googleChannelId && tokenInfo.googleChannelId !== channelId;
-            console.error(`[YouTube Video] Delete failed for ${videoId} channel=${channelId} googleCh=${tokenInfo?.googleChannelId} (status ${deleteRes.status}): ${errMsg} reason=${errReason}`);
-            if (deleteRes.status === 403) {
-              const mismatchMsg = hasMismatch
-                ? `Wrong Google account! Token is for channel ${tokenInfo.googleChannelId}, not ${channelId}. Re-validate with the correct account.`
-                : "Delete permission denied. Please re-validate token with the Google account that OWNS this channel.";
-              results.push({ videoId, success: false, error: mismatchMsg });
-            } else {
-              results.push({ videoId, success: false, error: errMsg });
-            }
+          if (deleteRes.ok || deleteRes.status === 204 || deleteRes.status === 404) {
+            markRemoved(channelId, videoId);
+            return { videoId, success: true };
           }
+          const data = await deleteRes.json().catch(() => ({}));
+          const errMsg = (data as Record<string, Record<string, string>>)?.error?.message || "Failed";
+          const errReason = (data as { error?: { errors?: Array<{ reason?: string }> } })?.error?.errors?.[0]?.reason || "";
+          const tokenInfo = await getChannelToken(channelId);
+          const hasMismatch = tokenInfo?.googleChannelId && tokenInfo.googleChannelId !== channelId;
+          console.error(`[YouTube Video] Delete failed for ${videoId} channel=${channelId} googleCh=${tokenInfo?.googleChannelId} (status ${deleteRes.status}): ${errMsg} reason=${errReason}`);
+          if (deleteRes.status === 403) {
+            return {
+              videoId,
+              success: false,
+              error: hasMismatch
+                ? `Wrong Google account! Token is for channel ${tokenInfo.googleChannelId}, not ${channelId}. Re-validate with the correct account.`
+                : "Delete permission denied. Please re-validate token with the Google account that OWNS this channel.",
+            };
+          }
+          return { videoId, success: false, error: errMsg };
         } catch (e) {
           console.error(`[YouTube Video] Delete network error for ${videoId}:`, e);
-          results.push({ videoId, success: false, error: "Network error" });
+          return { videoId, success: false, error: "Network error" };
         }
       }
-    } else if (action === "bulkPrivacy") {
-      const { privacyStatus } = body as { privacyStatus: string; action: string; videos: { videoId: string; channelId: string }[] };
-      if (!privacyStatus) {
-        return Response.json({ error: "privacyStatus required for bulkPrivacy" }, { status: 400 });
-      }
-      for (const { videoId, channelId } of videos) {
-        const accessToken = await getAccessTokenForChannel(channelId);
-        if (!accessToken) {
-          results.push({ videoId, success: false, error: "No valid token" });
-          continue;
-        }
-        try {
-          const detailRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/videos?part=snippet,status&id=${videoId}`,
-            { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }
-          );
-          const detailData = await detailRes.json();
-          if (!detailData.items?.length) {
-            results.push({ videoId, success: false, error: "Video not found" });
-            continue;
+
+      try {
+        const detailRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?part=snippet,status&id=${videoId}`,
+          { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }
+        );
+        const detailData = await detailRes.json();
+        if (!detailData.items?.length) return { videoId, success: false, error: "Video not found" };
+        const video = detailData.items[0];
+        const updateBody = {
+          id: videoId,
+          snippet: { ...video.snippet, categoryId: video.snippet.categoryId },
+          status: { ...video.status, privacyStatus },
+        };
+        const updateRes = await fetch(
+          "https://www.googleapis.com/youtube/v3/videos?part=snippet,status",
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify(updateBody),
           }
-          const video = detailData.items[0];
-          const updateBody = {
-            id: videoId,
-            snippet: { ...video.snippet, categoryId: video.snippet.categoryId },
-            status: { ...video.status, privacyStatus },
-          };
-          const updateRes = await fetch(
-            "https://www.googleapis.com/youtube/v3/videos?part=snippet,status",
-            {
-              method: "PUT",
-              headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-              body: JSON.stringify(updateBody),
-            }
-          );
-          if (updateRes.ok) {
-            await updateCachedVideo(channelId, {
-              id: videoId,
-              snippet: video.snippet as Record<string, unknown>,
-              status: updateBody.status as Record<string, unknown>,
-            });
-            results.push({ videoId, success: true });
-          } else {
-            const data = await updateRes.json().catch(() => ({}));
-            results.push({ videoId, success: false, error: (data as Record<string, Record<string, string>>)?.error?.message || "Failed" });
-          }
-        } catch {
-          results.push({ videoId, success: false, error: "Network error" });
+        );
+        if (!updateRes.ok) {
+          const data = await updateRes.json().catch(() => ({}));
+          return { videoId, success: false, error: (data as Record<string, Record<string, string>>)?.error?.message || "Failed" };
         }
+        if (!updatedByChannel.has(channelId)) updatedByChannel.set(channelId, []);
+        updatedByChannel.get(channelId)!.push({
+          id: videoId,
+          snippet: video.snippet as Record<string, unknown>,
+          status: updateBody.status as Record<string, unknown>,
+        });
+        return { videoId, success: true };
+      } catch {
+        return { videoId, success: false, error: "Network error" };
       }
-    } else {
-      return Response.json({ error: "Invalid action. Use bulkDelete or bulkPrivacy" }, { status: 400 });
-    }
+    };
+
+    const results = await mapWithConcurrency(videos, BULK_CONCURRENCY, processOne);
+
+    await Promise.all([
+      ...Array.from(removedByChannel.entries()).map(([channelId, ids]) =>
+        removeCachedVideos(channelId, ids)
+      ),
+      ...Array.from(updatedByChannel.entries()).map(([channelId, updates]) =>
+        updateCachedVideos(channelId, updates)
+      ),
+    ]);
 
     const successCount = results.filter((r) => r.success).length;
     return Response.json({ data: { results, successCount, totalCount: videos.length } });
