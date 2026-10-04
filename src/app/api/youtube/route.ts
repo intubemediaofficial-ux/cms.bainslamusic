@@ -24,6 +24,8 @@ import {
   getCachedDashboardRangeData,
   cacheChannelStats,
   getCachedChannelStats,
+  getCachedVideoLibraryPreview,
+  searchCachedVideoLibrary,
 } from "@/lib/youtube-cache";
 
 export const dynamic = "force-dynamic";
@@ -294,7 +296,7 @@ export async function GET(request: Request) {
     const channelScope = await getChannelScope(sessionEmail);
 
     // All YouTube API actions now use per-channel tokens (login tokens lack YouTube scopes)
-    if (!["dashboardFull", "lookupChannel", "bulkCachedChannels", "dashboard", "videos", "demographics", "realtime48"].includes(action || "")) {
+    if (!["dashboardFull", "lookupChannel", "bulkCachedChannels", "dashboard", "videos", "videoLibrary", "videoSearch", "demographics", "realtime48"].includes(action || "")) {
       return Response.json(
         { error: "This action requires per-channel token validation. Please validate channel tokens first." },
         { status: 401 }
@@ -334,6 +336,46 @@ export async function GET(request: Request) {
           } catch { /* ignore */ }
         }
         return Response.json({ data: results, _cached: true });
+      }
+      case "videoLibrary": {
+        const requestedIds = url.searchParams.get("channelIds")?.split(",").filter(Boolean) || [];
+        const channelIds = requestedIds.length > 0
+          ? Array.from(new Set(requestedIds.filter((channelId) => channelScope.approved.has(channelId))))
+          : Array.from(channelScope.approved);
+        const responseLimitParam = Number(url.searchParams.get("limit") || 0);
+        const responseLimit = Number.isInteger(responseLimitParam) && responseLimitParam > 0
+          ? Math.min(responseLimitParam, 1000)
+          : 500;
+        const library = await getCachedVideoLibraryPreview(channelIds, responseLimit);
+
+        return Response.json({
+          data: library.videos,
+          _cached: true,
+          _complete: library.incompleteChannelIds.length === 0,
+          _incompleteChannels: library.incompleteChannelIds.length,
+          _loadedChannels: library.loadedChannels,
+          _requestedChannels: requestedIds.length,
+          _authorizedChannels: channelIds.length,
+          _totalCount: library.totalCount,
+          _limited: library.totalCount > library.videos.length,
+          _lastUpdated: library.lastUpdated,
+        });
+      }
+      case "videoSearch": {
+        const query = url.searchParams.get("q")?.trim() || "";
+        if (!query) return Response.json({ data: [], _totalCount: 0 });
+        const requestedIds = url.searchParams.get("channelIds")?.split(",").filter(Boolean) || [];
+        const channelIds = requestedIds.length > 0
+          ? Array.from(new Set(requestedIds.filter((channelId) => channelScope.approved.has(channelId))))
+          : Array.from(channelScope.approved);
+        const library = await searchCachedVideoLibrary(channelIds, query);
+        return Response.json({
+          data: library.videos,
+          _complete: library.incompleteChannelIds.length === 0,
+          _incompleteChannels: library.incompleteChannelIds.length,
+          _searchedChannels: library.loadedChannels,
+          _totalCount: library.videos.length,
+        });
       }
       case "videos": {
         const channelId = url.searchParams.get("channelId");

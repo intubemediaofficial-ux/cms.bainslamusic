@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test:compliance": "node scripts/compliance-check.mjs",
-    "test:ai": "tsx scripts/ai-analytics-test.ts"
+    "test:ai": "tsx scripts/ai-analytics-test.ts",
+    "test:video-index": "tsx scripts/video-library-index-test.ts",
+    "rebuild:video-library": "tsx scripts/rebuild-video-library-cache.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

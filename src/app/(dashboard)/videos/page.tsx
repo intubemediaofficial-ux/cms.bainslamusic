@@ -5,7 +5,6 @@ import {
   Search,
   Play,
   ThumbsUp,
-  MessageSquare,
   Download,
   Eye,
   Loader2,
@@ -18,12 +17,11 @@ import {
   EyeOff,
   X,
   MoreHorizontal,
-  Image,
+  Image as ImageIcon,
   DollarSign,
   ShieldAlert,
   CheckCircle,
   XCircle,
-  Filter,
   Copy,
   CheckSquare,
   Square,
@@ -191,6 +189,9 @@ export default function VideosPage() {
   const [isReal, setIsReal] = useState(false);
 
   const [cacheLastUpdated, setCacheLastUpdated] = useState<string | null>(null);
+  const [totalLibraryCount, setTotalLibraryCount] = useState(0);
+  const [searchResults, setSearchResults] = useState<VideoItem[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const [editVideo, setEditVideo] = useState<VideoItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -254,46 +255,29 @@ export default function VideosPage() {
     [serverChannelIds]
   );
 
-  const fetchVideos = useCallback(async () => {
+  const fetchVideos = useCallback(async (showLoading = true) => {
     if (!isAuthenticated || allChannelIds.length === 0) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (showLoading) setLoading(true);
     setError(null);
     try {
-      let latestCacheTime: string | null = null;
-      let anyFromCache = false;
-      const results = await Promise.allSettled(
-        allChannelIds.map((channelId) =>
-          Promise.race([
-            fetch(`/api/youtube?action=videos&channelId=${encodeURIComponent(channelId)}`)
-              .then((r) => r.json())
-              .then((j) => {
-                if (j._cached && j._lastUpdated) {
-                  anyFromCache = true;
-                  if (!latestCacheTime || j._lastUpdated > latestCacheTime) latestCacheTime = j._lastUpdated;
-                }
-                return (j.data || []) as VideoItem[];
-              }),
-            new Promise<VideoItem[]>((_, reject) => setTimeout(() => reject(new Error("timeout")), 30000))
-          ])
-        )
-      );
-      const allVideos: VideoItem[] = [];
-      for (const r of results) {
-        if (r.status === "fulfilled") allVideos.push(...r.value);
-      }
-      if (allVideos.length > 0) {
-        setVideos(allVideos);
+      const query = new URLSearchParams({
+        action: "videoLibrary",
+        limit: "500",
+        channelIds: allChannelIds.join(","),
+      });
+      const response = await fetch(`/api/youtube?${query.toString()}`, { cache: "no-store" });
+      const json = await response.json();
+      setTotalLibraryCount(typeof json._totalCount === "number" ? json._totalCount : 0);
+      if (response.ok && Number(json._loadedChannels) > 0) {
+        setVideos((json.data || []) as VideoItem[]);
         setIsReal(true);
-        if (anyFromCache && latestCacheTime) {
-          setCacheLastUpdated(latestCacheTime);
-        } else {
-          setCacheLastUpdated(null);
-        }
+        setCacheLastUpdated(typeof json._lastUpdated === "string" ? json._lastUpdated : null);
       } else {
-        setError("No videos found for added channels. Please check if channels have valid tokens.");
+        setIsReal(false);
+        setError(json.error || "No cached videos found for added channels. Please check if channels have valid tokens.");
       }
     } catch {
       setError("Failed to load videos. Please try again.");
@@ -317,18 +301,57 @@ export default function VideosPage() {
   const VIDEOS_PER_PAGE = 50;
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!query || allChannelIds.length === 0) {
+      const clearTimer = window.setTimeout(() => {
+        setSearchResults([]);
+        setSearching(false);
+      }, 0);
+      return () => window.clearTimeout(clearTimer);
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const params = new URLSearchParams({
+          action: "videoSearch",
+          q: query,
+          channelIds: allChannelIds.join(","),
+        });
+        const response = await fetch(`/api/youtube?${params.toString()}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const json = await response.json();
+        setSearchResults(response.ok ? (json.data || []) as VideoItem[] : []);
+      } catch (searchError) {
+        if (searchError instanceof DOMException && searchError.name === "AbortError") return;
+        setSearchResults([]);
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
+    }, 150);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [allChannelIds, searchQuery]);
+
+  const activeVideoLibrary = searchQuery.trim() ? searchResults : videos;
+
   const channelOptions = useMemo(() => {
     const map = new Map<string, string>();
-    for (const v of videos) {
+    for (const v of activeVideoLibrary) {
       const cid = v.snippet?.channelId;
       const cname = v.snippet?.channelTitle;
       if (cid && !map.has(cid)) map.set(cid, cname || cid);
     }
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [videos]);
+  }, [activeVideoLibrary]);
 
   const privacyCounts = useMemo(() => {
-    const channelVids = (isReal ? videos : []).filter((v) =>
+    const channelVids = (isReal ? activeVideoLibrary : []).filter((v) =>
       channelFilter === "all" || v.snippet?.channelId === channelFilter
     );
     let pub = 0, priv = 0, unlist = 0;
@@ -339,19 +362,15 @@ export default function VideosPage() {
       else pub++;
     }
     return { all: channelVids.length, public: pub, private: priv, unlisted: unlist };
-  }, [videos, isReal, channelFilter]);
+  }, [activeVideoLibrary, isReal, channelFilter]);
 
   const filteredVideos = useMemo(() => {
     if (!isReal) return [];
     const result: VideoItem[] = [];
-    for (const video of videos) {
+    for (const video of activeVideoLibrary) {
       if (channelFilter !== "all" && video.snippet?.channelId !== channelFilter) continue;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const title = (video.snippet?.title || "").toLowerCase();
-        const tags = (video.snippet?.tags || []).join(" ").toLowerCase();
-        if (!title.includes(q) && !tags.includes(q) && video.id !== searchQuery.trim()) continue;
-      }
+      const title = video.snippet?.title || "";
+      if (searchQuery && !title.toLowerCase().includes(searchQuery.toLowerCase())) continue;
       if (statusFilter !== "all") {
         const rawPrivacy = video.status?.privacyStatus;
         const videoPrivacy = rawPrivacy ? rawPrivacy.toLowerCase() : "public";
@@ -368,10 +387,13 @@ export default function VideosPage() {
       result.push(video);
     }
     return result;
-  }, [videos, isReal, searchQuery, statusFilter, monetizationFilter, channelFilter, claims]);
+  }, [activeVideoLibrary, isReal, searchQuery, statusFilter, monetizationFilter, channelFilter, claims]);
 
   useEffect(() => {
-    queueMicrotask(() => setCurrentPage(1));
+    queueMicrotask(() => {
+      setCurrentPage(1);
+      setSelectedVideos(new Set());
+    });
   }, [searchQuery, statusFilter, monetizationFilter, channelFilter]);
 
   const totalPages = Math.ceil(filteredVideos.length / VIDEOS_PER_PAGE);
@@ -582,6 +604,17 @@ export default function VideosPage() {
     }
   };
 
+  const updateVideoInLibraries = (
+    videoId: string,
+    update: (video: VideoItem) => VideoItem
+  ) => {
+    const applyUpdate = (current: VideoItem[]) => current.map((video) =>
+      video.id === videoId ? update(video) : video
+    );
+    setVideos(applyUpdate);
+    setSearchResults(applyUpdate);
+  };
+
   const handleEditSave = async () => {
     if (!editVideo?.id || !editVideo.snippet?.channelId) return;
     setEditSaving(true);
@@ -605,6 +638,16 @@ export default function VideosPage() {
         setEditError(data.error || "Failed to update video. Please ensure channel token is valid.");
         return;
       }
+      updateVideoInLibraries(editVideo.id, (video) => ({
+        ...video,
+        snippet: {
+          ...video.snippet,
+          title: editTitle,
+          description: editDesc,
+          tags: tagsArray,
+        },
+        status: { ...video.status, privacyStatus: editPrivacy },
+      }));
       if (editThumbFile) {
         setEditThumbUploading(true);
         try {
@@ -618,15 +661,19 @@ export default function VideosPage() {
             setEditError(
               `Details saved, but thumbnail upload failed: ${thumbData.error || "unknown error"}`
             );
-            fetchVideos();
             return;
+          }
+          if (thumbData.data?.thumbnails) {
+            updateVideoInLibraries(editVideo.id!, (video) => ({
+              ...video,
+              snippet: { ...video.snippet, thumbnails: thumbData.data.thumbnails },
+            }));
           }
         } finally {
           setEditThumbUploading(false);
         }
       }
       closeEdit();
-      fetchVideos();
     } catch {
       setEditError("Network error — check your connection and try again");
     } finally {
@@ -647,7 +694,12 @@ export default function VideosPage() {
           privacyStatus: newPrivacy,
         }),
       });
-      if (res.ok) fetchVideos();
+      if (res.ok) {
+        updateVideoInLibraries(video.id, (current) => ({
+          ...current,
+          status: { ...current.status, privacyStatus: newPrivacy },
+        }));
+      }
     } catch {
       // silent
     }
@@ -664,7 +716,10 @@ export default function VideosPage() {
       );
       const data = await res.json();
       if (res.ok) {
-        setVideos(videos.filter((v) => v.id !== deleteVideo.id));
+        const deletedVideoId = deleteVideo.id;
+        setVideos((current) => current.filter((video) => video.id !== deletedVideoId));
+        setSearchResults((current) => current.filter((video) => video.id !== deletedVideoId));
+        setTotalLibraryCount((current) => Math.max(0, current - 1));
         setDeleteVideo(null);
       } else {
         setDeleteError(data.error || "Failed to delete video. Please ensure channel token is valid.");
@@ -707,7 +762,7 @@ export default function VideosPage() {
     if (!confirm(`Are you sure you want to delete ${selectedVideos.size} video(s)? This cannot be undone.`)) return;
     setBulkActionInProgress(true);
     setBulkResult(null);
-    const videosToDelete = videos
+    const videosToDelete = activeVideoLibrary
       .filter((v) => v.id && selectedVideos.has(v.id))
       .map((v) => ({ videoId: v.id!, channelId: v.snippet?.channelId || "" }));
     try {
@@ -719,7 +774,9 @@ export default function VideosPage() {
       const data = await res.json();
       if (res.ok) {
         const successIds = new Set(data.data.results.filter((r: { success: boolean }) => r.success).map((r: { videoId: string }) => r.videoId));
-        setVideos(videos.filter((v) => !successIds.has(v.id!)));
+        setVideos((current) => current.filter((v) => !successIds.has(v.id!)));
+        setSearchResults((current) => current.filter((v) => !successIds.has(v.id!)));
+        setTotalLibraryCount((current) => Math.max(0, current - successIds.size));
         setBulkResult(`${data.data.successCount}/${data.data.totalCount} videos deleted successfully`);
         setSelectedVideos(new Set());
       } else {
@@ -736,7 +793,7 @@ export default function VideosPage() {
     if (selectedVideos.size === 0) return;
     setBulkActionInProgress(true);
     setBulkResult(null);
-    const videosToUpdate = videos
+    const videosToUpdate = activeVideoLibrary
       .filter((v) => v.id && selectedVideos.has(v.id))
       .map((v) => ({ videoId: v.id!, channelId: v.snippet?.channelId || "" }));
     try {
@@ -749,7 +806,16 @@ export default function VideosPage() {
       if (res.ok) {
         setBulkResult(`${data.data.successCount}/${data.data.totalCount} videos updated to ${privacyStatus}`);
         setSelectedVideos(new Set());
-        fetchVideos();
+        const successIds = new Set(
+          data.data.results.filter((r: { success: boolean }) => r.success).map((r: { videoId: string }) => r.videoId)
+        );
+        const applyPrivacy = (current: VideoItem[]) => current.map((video) =>
+          video.id && successIds.has(video.id)
+            ? { ...video, status: { ...video.status, privacyStatus } }
+            : video
+        );
+        setVideos(applyPrivacy);
+        setSearchResults(applyPrivacy);
       } else {
         setBulkResult(data.error || "Bulk privacy change failed");
       }
@@ -1205,8 +1271,9 @@ export default function VideosPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search videos..."
-                  className="w-full pl-10 pr-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder:text-muted-light"
+                  className="w-full pl-10 pr-10 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder:text-muted-light"
                 />
+                {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />}
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <select
@@ -1257,7 +1324,9 @@ export default function VideosPage() {
 
             {(statusFilter !== "all" || channelFilter !== "all" || monetizationFilter !== "all" || searchQuery) && (
               <p className="text-xs text-muted mb-3">
-                Showing {filteredVideos.length} of {videos.length} videos
+                {searchQuery.trim()
+                  ? `Showing ${filteredVideos.length} matching videos`
+                  : `Showing ${videos.length} cached videos from ${totalLibraryCount} total`}
               </p>
             )}
 
@@ -1415,7 +1484,7 @@ export default function VideosPage() {
                                     onClick={() => setOpenMenuId(null)}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted hover:bg-slate-50"
                                   >
-                                    <Image className="w-3.5 h-3.5" /> Open in YouTube Studio
+                                    <ImageIcon className="w-3.5 h-3.5" /> Open in YouTube Studio
                                   </a>
                                   <div className="border-t border-border my-1" />
                                   <button
@@ -1467,7 +1536,7 @@ export default function VideosPage() {
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
               <p className="text-sm text-muted">
                 Showing {(currentPage - 1) * VIDEOS_PER_PAGE + 1}–{Math.min(currentPage * VIDEOS_PER_PAGE, filteredVideos.length)} of {filteredVideos.length} videos
-                {filteredVideos.length !== videos.length && ` (${videos.length} total)`}
+                {!searchQuery.trim() && filteredVideos.length !== videos.length && ` (${videos.length} loaded)`}
               </p>
               {totalPages > 1 && (
                 <div className="flex items-center gap-2">
@@ -1645,7 +1714,7 @@ export default function VideosPage() {
                         />
                       )}
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/0 group-hover:bg-black/50 text-white opacity-0 group-hover:opacity-100 transition">
-                        <Image className="w-6 h-6" />
+                        <ImageIcon className="w-6 h-6" />
                         <span className="text-xs font-medium">{editThumbFile ? "Change thumbnail" : "Upload thumbnail"}</span>
                       </div>
                       {editThumbFile && (
@@ -1663,7 +1732,7 @@ export default function VideosPage() {
                     </label>
                     <div className="mt-3 flex items-center gap-3">
                       <label className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground hover:bg-slate-50 cursor-pointer">
-                        <Image className="w-4 h-4" />
+                        <ImageIcon className="w-4 h-4" />
                         {editThumbFile ? "Change" : "Upload"}
                         <input
                           type="file"
