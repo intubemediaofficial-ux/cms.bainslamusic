@@ -39,6 +39,20 @@ export const kv = {
     }
   },
 
+  async mget<T = unknown>(keys: string[]): Promise<Array<T | null>> {
+    if (keys.length === 0) return [];
+    const redis = getRedis();
+    const values = await redis.mget(keys);
+    return values.map((value) => {
+      if (value === null) return null;
+      try {
+        return JSON.parse(value) as T;
+      } catch {
+        return value as unknown as T;
+      }
+    });
+  },
+
   async set(key: string, value: unknown, options?: { ex?: number }): Promise<"OK"> {
     const redis = getRedis();
     const serialized = typeof value === "string" ? value : JSON.stringify(value);

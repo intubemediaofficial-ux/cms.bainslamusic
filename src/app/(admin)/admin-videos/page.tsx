@@ -19,8 +19,6 @@ import {
   XCircle,
   Plus,
   Trash2,
-  RefreshCw,
-  Users,
   Video,
   Copy,
   CheckSquare,
@@ -186,6 +184,9 @@ export default function AdminVideosPage() {
   const [clients, setClients] = useState<ClientUser[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>("all");
   const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [searchResults, setSearchResults] = useState<VideoItem[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [totalLibraryCount, setTotalLibraryCount] = useState(0);
   const [claims, setClaims] = useState<VideoClaim[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
   const [loadingVideos, setLoadingVideos] = useState(false);
@@ -193,18 +194,23 @@ export default function AdminVideosPage() {
   const [monetizationFilter, setMonetizationFilter] = useState<MonetizationFilter>("all");
   const [privacyFilter, setPrivacyFilter] = useState<string>("all");
   const [channelFilter, setChannelFilter] = useState<string>("all");
+  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
+  const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
   const VIDEOS_PER_PAGE = 50;
   const [currentPage, setCurrentPage] = useState(1);
 
+  const activeVideoLibrary = searchQuery.trim() ? searchResults : videos;
+
   const channelOptions = useMemo(() => {
     const map = new Map<string, string>();
-    for (const v of videos) {
+    for (const v of activeVideoLibrary) {
       const cid = v.snippet?.channelId;
       const cname = v.snippet?.channelTitle;
       if (cid && !map.has(cid)) map.set(cid, cname || cid);
     }
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [videos]);
+  }, [activeVideoLibrary]);
 
   // Duplicate detector
   const [showDuplicates, setShowDuplicates] = useState(false);
@@ -254,44 +260,33 @@ export default function AdminVideosPage() {
   const fetchVideosForChannels = useCallback(async (channelIds: string[]) => {
     if (channelIds.length === 0) {
       setVideos([]);
+      setTotalLibraryCount(0);
       return;
     }
     setLoadingVideos(true);
     setVideoCacheTime(null);
     try {
-      let latestCacheTime: string | null = null;
-      let anyFromCache = false;
-      const results = await Promise.allSettled(
-        channelIds.map((channelId) =>
-          Promise.race([
-            fetch(`/api/youtube?action=videos&channelId=${encodeURIComponent(channelId)}`)
-              .then((r) => r.json())
-              .then((j) => {
-                if (j._cached && j._lastUpdated) {
-                  anyFromCache = true;
-                  if (!latestCacheTime || j._lastUpdated > latestCacheTime) latestCacheTime = j._lastUpdated;
-                }
-                return (j.data || []) as VideoItem[];
-              }),
-            new Promise<VideoItem[]>((_, reject) => setTimeout(() => reject(new Error("timeout")), 30000))
-          ])
-        )
-      );
-      const allVideos: VideoItem[] = [];
-      for (const r of results) {
-        if (r.status === "fulfilled") allVideos.push(...r.value);
-      }
-      setVideos(allVideos);
-      if (anyFromCache && latestCacheTime) setVideoCacheTime(latestCacheTime);
+      const query = new URLSearchParams({
+        action: "videoLibrary",
+        limit: "500",
+        channelIds: channelIds.join(","),
+      });
+      const response = await fetch(`/api/youtube?${query.toString()}`, { cache: "no-store" });
+      const json = await response.json();
+      setVideos(response.ok ? (json.data || []) as VideoItem[] : []);
+      setTotalLibraryCount(typeof json._totalCount === "number" ? json._totalCount : 0);
+      setVideoCacheTime(typeof json._lastUpdated === "string" ? json._lastUpdated : null);
     } catch { /* silent */ }
     setLoadingVideos(false);
   }, []);
 
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.role === "admin") {
-      fetchClients();
-      fetchClaims();
-    }
+    queueMicrotask(() => {
+      if (status === "authenticated" && session?.user?.role === "admin") {
+        fetchClients();
+        fetchClaims();
+      }
+    });
   }, [status, session, fetchClients, fetchClaims]);
 
   // Also fetch real channel IDs from cached data (in case KV has test IDs)
@@ -313,21 +308,61 @@ export default function AdminVideosPage() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
+  const selectedChannelIds = useMemo(() => {
     if (selectedClient === "all") {
-      const kvChannels = clients.reduce<string[]>((acc, c) => [...acc, ...c.channels], []);
-      // Merge KV channels + cached channels (dedup), skip test IDs
-      const allSet = new Set([...kvChannels, ...cachedChannelIds].filter((id) => !id.startsWith("UCtest") && id !== "test"));
-      fetchVideosForChannels(Array.from(allSet));
-    } else {
-      const client = clients.find((c) => c.id === selectedClient);
-      fetchVideosForChannels(client?.channels || []);
+      const clientChannels = clients.flatMap((client) => client.channels);
+      return Array.from(new Set(
+        [...clientChannels, ...cachedChannelIds]
+          .filter((channelId) => !channelId.startsWith("UCtest") && channelId !== "test")
+      ));
     }
-  }, [selectedClient, clients, cachedChannelIds, fetchVideosForChannels]);
+    return clients.find((client) => client.id === selectedClient)?.channels || [];
+  }, [selectedClient, clients, cachedChannelIds]);
+
+  useEffect(() => {
+    queueMicrotask(() => fetchVideosForChannels(selectedChannelIds));
+  }, [selectedChannelIds, fetchVideosForChannels]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!query || selectedChannelIds.length === 0) {
+      const clearTimer = window.setTimeout(() => {
+        setSearchResults([]);
+        setSearching(false);
+      }, 0);
+      return () => window.clearTimeout(clearTimer);
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const params = new URLSearchParams({
+          action: "videoSearch",
+          q: query,
+          channelIds: selectedChannelIds.join(","),
+        });
+        const response = await fetch(`/api/youtube?${params.toString()}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const json = await response.json();
+        setSearchResults(response.ok ? (json.data || []) as VideoItem[] : []);
+      } catch (searchError) {
+        if (searchError instanceof DOMException && searchError.name === "AbortError") return;
+        setSearchResults([]);
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
+    }, 150);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchQuery, selectedChannelIds]);
 
   // Pre-compute privacy counts (based on channel filter only) for dropdown labels
   const privacyCounts = useMemo(() => {
-    const channelVids = videos.filter((v) =>
+    const channelVids = activeVideoLibrary.filter((v) =>
       channelFilter === "all" || v.snippet?.channelId === channelFilter
     );
     let pub = 0, priv = 0, unlist = 0;
@@ -338,21 +373,16 @@ export default function AdminVideosPage() {
       else pub++;
     }
     return { all: channelVids.length, public: pub, private: priv, unlisted: unlist };
-  }, [videos, channelFilter]);
+  }, [activeVideoLibrary, channelFilter]);
 
   const filteredVideos = useMemo(() => {
     const result: VideoItem[] = [];
-    for (const video of videos) {
+    for (const video of activeVideoLibrary) {
       // Channel filter
       if (channelFilter !== "all" && video.snippet?.channelId !== channelFilter) continue;
 
-      // Search filter (title, tags or exact video ID)
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const title = (video.snippet?.title || "").toLowerCase();
-        const tags = (video.snippet?.tags || []).join(" ").toLowerCase();
-        if (!title.includes(q) && !tags.includes(q) && video.id !== searchQuery.trim()) continue;
-      }
+      const title = video.snippet?.title || "";
+      if (searchQuery && !title.toLowerCase().includes(searchQuery.toLowerCase())) continue;
 
       // Privacy filter - strict comparison
       if (privacyFilter !== "all") {
@@ -374,16 +404,15 @@ export default function AdminVideosPage() {
       result.push(video);
     }
     return result;
-  }, [videos, searchQuery, monetizationFilter, privacyFilter, channelFilter, claims]);
+  }, [activeVideoLibrary, searchQuery, monetizationFilter, privacyFilter, channelFilter, claims]);
 
   // Reset page when filters change
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, privacyFilter, monetizationFilter, channelFilter, selectedClient]);
-
-  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
-  const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
-  const [bulkResult, setBulkResult] = useState<string | null>(null);
-
-  useEffect(() => { queueMicrotask(() => setSelectedVideos(new Set())); }, [selectedClient]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      setCurrentPage(1);
+      setSelectedVideos(new Set());
+    });
+  }, [searchQuery, privacyFilter, monetizationFilter, channelFilter, selectedClient]);
 
   const totalPages = Math.ceil(filteredVideos.length / VIDEOS_PER_PAGE);
   const paginatedVideos = useMemo(() => {
@@ -482,7 +511,7 @@ export default function AdminVideosPage() {
   const selectAllFiltered = () => setSelectedVideos(new Set(filteredIds));
 
   const selectedPayload = () =>
-    videos
+    activeVideoLibrary
       .filter((v) => v.id && selectedVideos.has(v.id))
       .map((v) => ({ videoId: v.id!, channelId: v.snippet?.channelId || "" }));
 
@@ -503,6 +532,8 @@ export default function AdminVideosPage() {
           data.data.results.filter((r: { success: boolean }) => r.success).map((r: { videoId: string }) => r.videoId)
         );
         setVideos((prev) => prev.filter((v) => !successIds.has(v.id!)));
+        setSearchResults((prev) => prev.filter((v) => !successIds.has(v.id!)));
+        setTotalLibraryCount((current) => Math.max(0, current - successIds.size));
         setBulkResult(`${data.data.successCount}/${data.data.totalCount} videos deleted`);
         setSelectedVideos(new Set());
       } else {
@@ -530,11 +561,12 @@ export default function AdminVideosPage() {
         const successIds = new Set(
           data.data.results.filter((r: { success: boolean }) => r.success).map((r: { videoId: string }) => r.videoId)
         );
-        setVideos((prev) =>
-          prev.map((v) =>
+        const applyPrivacy = (current: VideoItem[]) =>
+          current.map((v) =>
             v.id && successIds.has(v.id) ? { ...v, status: { ...v.status, privacyStatus } } : v
-          )
-        );
+          );
+        setVideos(applyPrivacy);
+        setSearchResults(applyPrivacy);
         setBulkResult(`${data.data.successCount}/${data.data.totalCount} videos set to ${privacyStatus}`);
         setSelectedVideos(new Set());
       } else {
@@ -881,8 +913,9 @@ export default function AdminVideosPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search videos..."
-              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full pl-10 pr-10 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
+            {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <select
@@ -958,7 +991,9 @@ export default function AdminVideosPage() {
           <>
           {(privacyFilter !== "all" || channelFilter !== "all" || monetizationFilter !== "all" || searchQuery) && (
             <p className="text-xs text-muted mb-3">
-              Showing {filteredVideos.length} of {videos.length} videos
+              {searchQuery.trim()
+                ? `Showing ${filteredVideos.length} matching videos`
+                : `Showing ${videos.length} cached videos from ${totalLibraryCount} total`}
             </p>
           )}
           {bulkResult && (
